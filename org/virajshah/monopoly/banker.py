@@ -49,7 +49,7 @@ class MortgageManager:
         out = []
         for prop in self.client.properties:
             if isinstance(prop, ColoredProperty) and prop.is_monopoly_completed():
-                monopoly_set = self.client_properties_by_attribute(prop.set_attribute())
+                monopoly_set = [prop for prop in self.client.properties if prop.set_attribute() in prop.attributes]
                 flag = True
                 for set_prop in monopoly_set:
                     if set_prop.houses != 5:
@@ -85,40 +85,19 @@ class MortgageManager:
         return out
 
     def class_d_properties(self):
-        out = []
         conflicts = utils.merge(self.class_a_properties(), self.class_b_properties(), self.class_c_properties())
-
-        for prop in self.client.properties:
-            if prop not in conflicts and prop.is_monopoly_completed():
-                out.append(prop)
-        return out
+        return [prop for prop in self.client.properties if prop not in conflicts and prop.is_monopoly_completed()]
 
     def class_e_properties(self):
-        out = []
         conflicts = utils.merge(self.class_a_properties(), self.class_b_properties(), self.class_c_properties(),
                                 self.class_d_properties())
-
-        for prop in self.client.properties:
-            if prop not in conflicts and self.broker.attribute_completion(prop.set_attribute()) >= 0.5:
-                out.append(prop)
-        return out
+        return [prop for prop in self.client.properties if
+                prop not in conflicts and self.broker.attribute_completion(prop.set_attribute()) >= 0.5]
 
     def class_f_properties(self):
-        out = []
         conflicts = utils.merge(self.class_a_properties(), self.class_b_properties(), self.class_c_properties(),
                                 self.class_d_properties(), self.class_e_properties())
-
-        for prop in self.client.properties:
-            if prop not in conflicts:
-                out.append(prop)
-        return out
-
-    def client_properties_by_attribute(self, attribute):
-        out = []
-        for prop in self.client.properties:
-            if attribute in prop.attributes:
-                out.append(prop)
-        return out
+        return [prop for prop in self.client.properties if prop not in conflicts]
 
 
 class TradeBroker:
