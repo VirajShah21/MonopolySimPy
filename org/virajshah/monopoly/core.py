@@ -37,10 +37,10 @@ class MonopolyGame:
         turn.dice_roll1 = randrange(1, 7)
         turn.dice_roll2 = randrange(1, 7)
         turn.origin = player.position
-        turn.origin_in_jail = player.is_prisoner
+        turn.origin_in_jail = player.prisoner
         turn.initial_balance = player.balance
 
-        if player.is_prisoner and turn.dice_roll1 == turn.dice_roll2:
+        if player.prisoner and turn.dice_roll1 == turn.dice_roll2:
             print("Replace this with a log")
         else:
             print("Replace this with a log")

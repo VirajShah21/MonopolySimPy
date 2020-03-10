@@ -51,12 +51,12 @@ class BasicTile(Tile):
         super().__init__(name, **kwargs)
 
 
-class Property(ABC, Tile):
+class Property(Tile, ABC):
     # Inherited Fields
     #       Tile: str name, TileAttribute[] attributes
     # Fields: int price, Player owner
     def __init__(self, name, price, **kwargs):
-        super().__init__(name, kwargs)
+        super().__init__(name, **kwargs)
         self.price = price
         self.owner = None  # Player
 
@@ -111,13 +111,30 @@ class ColoredProperty(Property):
         elif set_attr == TileAttribute.SET7 or set_attr == TileAttribute.SET8:
             return 200
 
+    def rent(self, **kwargs):
+        return self.rents[self.houses]
+
 
 class NonColoredProperty(Property):
     # Inherited Fields
     #       Tile: str name, TileAttribute[] attributes
     # Fields: int price, Player owner
     def __init__(self, name, prop_type):
-        super(name, 200 if prop_type == TileAttribute.RAILROAD else 150)
+        super().__init__(name, 200 if prop_type == TileAttribute.RAILROAD else 150)
+
+    def rent(self, **kwargs):
+        if TileAttribute.RAILROAD in self.attributes:
+            count = 0
+            for prop in self.owner.properties:
+                if prop.set_attribute() == TileAttribute.RAILROAD:
+                    count += 1
+            return (2 ** (count - 1)) * 25
+        else:
+            count = 0
+            for prop in self.owner.properties:
+                if prop.set_attribute() == TileAttribute.UTILITY:
+                    count += 1
+            return kwargs["roll"] * (10 if count == 2 else 4)
 
 
 def build_board():
