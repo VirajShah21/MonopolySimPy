@@ -3,14 +3,38 @@ from .tiles import ColoredProperty
 
 
 class MortgageManager:
+    # Fields: Player client, TradeBroker broker
     def __init__(self, client):
         self.client = client
         self.broker = TradeBroker(client)
 
-    def smart_mortgage(self, threshold):
-        liquidate = 0
-        toLiquidate = self.class_a_properties()
-        # TODO: finish this method
+    def force_mortgage(self, threshold):
+        liquidated = 0
+
+        liquidated += self.liquidate(self.class_f_properties(), threshold)
+        if liquidated < threshold:
+            self.liquidate(self.class_e_properties(), threshold)
+            if liquidated < threshold:
+                self.liquidate(self.class_d_properties(), threshold)
+                if liquidated < threshold:
+                    self.liquidate(self.class_c_properties(), threshold)
+                    if liquidated < threshold:
+                        self.liquidate(self.class_b_properties(), threshold)
+                        if liquidated < threshold:
+                            self.liquidate(self.class_a_properties(), threshold)
+        return liquidated
+
+    @staticmethod
+    def liquidate(to_liquidate, threshold):
+        liquidated = 0
+        for prop in to_liquidate:
+            if not prop.mortgaged:
+                prop.mortgaged = True
+                liquidated += prop.price / 2
+
+            if liquidated >= threshold:
+                return liquidated
+        return liquidated
 
     '''
          Class A Properties - Colored properties in a monopoly set with a hotel on all properties in the set
@@ -98,6 +122,8 @@ class MortgageManager:
 
 
 class TradeBroker:
+    # Fields: Player client
+
     @staticmethod
     def count_properties_with_attribute(player, attr):
         count = 0
@@ -181,6 +207,9 @@ class TradeBroker:
 
 
 class TradeDeal:
+    # Fields: Player player1, Player player2, Property[] player1acquisitions, Property[] player2acquisitions
+    #         int compensation
+
     def __init__(self, p1, p2):
         self.player1 = p1
         self.player2 = p2

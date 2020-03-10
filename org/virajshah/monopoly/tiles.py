@@ -30,6 +30,7 @@ class TileAttribute(Enum):
 
 
 class Tile(ABC):
+    # Fields: str name, TileAttribute[] attributes
     def __init__(self, name, **kwargs):
         self.name = name
         if "attribute" in kwargs:
@@ -44,11 +45,16 @@ class Tile(ABC):
 
 
 class BasicTile(Tile):
+    # Inherited Fields
+    #       Tile: str name, TileAttribute[] attributes
     def __init__(self, name, **kwargs):
         super().__init__(name, **kwargs)
 
 
 class Property(ABC, Tile):
+    # Inherited Fields
+    #       Tile: str name, TileAttribute[] attributes
+    # Fields: int price, Player owner
     def __init__(self, name, price, **kwargs):
         super().__init__(name, kwargs)
         self.price = price
@@ -84,6 +90,10 @@ class Property(ABC, Tile):
 
 
 class ColoredProperty(Property):
+    # Inherited Fields
+    #       Tile: str name, TileAttribute[] attributes
+    #       Property: int price, Player owner
+    # Fields: int[] rents, int houses
     def __init__(self, name, price, rent_list, set_attribute):
         super().__init__(name, price,
                          attributes=[TileAttribute.PROPERTY, set_attribute, TileAttribute.COLORED_PROPERTY])
@@ -103,6 +113,9 @@ class ColoredProperty(Property):
 
 
 class NonColoredProperty(Property):
+    # Inherited Fields
+    #       Tile: str name, TileAttribute[] attributes
+    # Fields: int price, Player owner
     def __init__(self, name, prop_type):
         super(name, 200 if prop_type == TileAttribute.RAILROAD else 150)
 

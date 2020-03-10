@@ -8,6 +8,7 @@ JAIL_INDEX = 10
 
 
 class MonopolyGame:
+    # Fields: Tile[] board, Player[] players, Player[] bankrupted_players, int curr_player
     def __init__(self):
         self.board = tiles.build_board()  # Tile[]
         self.players = []
@@ -78,6 +79,8 @@ class MonopolyGame:
 
 
 class Player:
+    # Fields: str name, int balance, int position, TurnHistoryRecord turn_history, PropertyTile[] properties,
+    #         bool prisoner
     def __init__(self, name):
         self.name = name  # str
         self.balance = 1500
