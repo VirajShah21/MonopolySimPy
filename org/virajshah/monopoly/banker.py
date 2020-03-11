@@ -4,6 +4,7 @@ from .tiles import ColoredProperty
 
 class MortgageManager:
     # Fields: Player client, TradeBroker broker
+
     def __init__(self, client):
         self.client = client
         self.broker = TradeBroker(client)
@@ -36,14 +37,12 @@ class MortgageManager:
                 return liquidated
         return liquidated
 
-    '''
-         Class A Properties - Colored properties in a monopoly set with a hotel on all properties in the set
-         Class B Properties - Colored properties with at least one hotel on the set
-         Class C Properties - Colored properties with at least one house on each property
-         Class D Properties - Properties as part of a completed monopoly set
-         Class E Properties - 50% or more completed sets
-         Class F Properties - Any other property
-    '''
+    # Class A Properties - Colored properties in a monopoly set with a hotel on all properties in the set
+    # Class B Properties - Colored properties with at least one hotel on the set
+    # Class C Properties - Colored properties with at least one house on each property
+    # Class D Properties - Properties as part of a completed monopoly set
+    # Class E Properties - 50% or more completed sets
+    # Class F Properties - Any other property
 
     def class_a_properties(self):
         out = []
@@ -222,13 +221,8 @@ class TradeManager:
         receiving = broker.most_wanted_set()
         giving = other_broker.most_wanted_set()
 
-        for prop in other_player.properties:
-            if receiving in prop.attributes:
-                deal.player1acquisitions.append(prop)
-
-        for prop in client.properties:
-            if giving in prop.attributes:
-                deal.player2acquisitions.append(prop)
+        deal.player1acquisitions = [prop for prop in other_player.properties if receiving in prop.attributes]
+        deal.player2acquisitions = [prop for prop in client.properties if giving in prop.attributes]
 
         player1value = 0
         player2value = 0
