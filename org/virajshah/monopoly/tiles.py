@@ -28,6 +28,12 @@ class TileAttribute(Enum):
     NONCOLORED_PROPERTY = 20
     MORTGAGED = 21
 
+    @staticmethod
+    def is_set_attribute(attr):
+        return attr in [TileAttribute.SET1, TileAttribute.SET2, TileAttribute.SET3, TileAttribute.SET4,
+                        TileAttribute.SET5, TileAttribute.SET6, TileAttribute.SET7, TileAttribute.SET8,
+                        TileAttribute.RAILROAD, TileAttribute.UTILITY]
+
 
 class Tile(ABC):
     # Fields: str name, TileAttribute[] attributes
@@ -81,8 +87,18 @@ class Property(Tile, ABC):
         else:
             return count == 3
 
+    def purchase(self, purchaser):
+        self.owner = purchaser
+        purchaser.add_money(-self.price)
+        purchaser.properties.append(self)
+
     def mortgage(self):
         pass  # implement this
+
+    def transfer_ownership(self, new_owner):
+        self.owner.properties.remove(self)
+        self.owner = new_owner
+        new_owner.properties.append(self)
 
     @abstractmethod
     def rent(self, **kwargs):

@@ -1,5 +1,4 @@
-from . import utils
-from .tiles import ColoredProperty
+from .tiles import ColoredProperty, Property
 
 
 class MortgageManager:
@@ -70,7 +69,7 @@ class MortgageManager:
 
     def class_c_properties(self):
         out = []
-        conflicts = utils.merge(self.class_a_properties(), self.class_b_properties())
+        conflicts = self.class_a_properties() + self.class_b_properties()
 
         for prop in self.client.properties:
             if prop in conflicts:
@@ -84,18 +83,19 @@ class MortgageManager:
         return out
 
     def class_d_properties(self):
-        conflicts = utils.merge(self.class_a_properties(), self.class_b_properties(), self.class_c_properties())
+        conflicts = self.class_a_properties() + self.class_b_properties() + self.class_c_properties()
         return [prop for prop in self.client.properties if prop not in conflicts and prop.is_monopoly_completed()]
 
     def class_e_properties(self):
-        conflicts = utils.merge(self.class_a_properties(), self.class_b_properties(), self.class_c_properties(),
-                                self.class_d_properties())
+        conflicts = self.class_a_properties() + self.class_b_properties()
+        conflicts += self.class_c_properties() + self.class_d_properties()
+
         return [prop for prop in self.client.properties if
                 prop not in conflicts and self.broker.attribute_completion(prop.set_attribute()) >= 0.5]
 
     def class_f_properties(self):
-        conflicts = utils.merge(self.class_a_properties(), self.class_b_properties(), self.class_c_properties(),
-                                self.class_d_properties(), self.class_e_properties())
+        conflicts = self.class_a_properties() + self.class_b_properties() + self.class_c_properties()
+        conflicts += self.class_d_properties() + self.class_e_properties()
         return [prop for prop in self.client.properties if prop not in conflicts]
 
 
@@ -167,7 +167,7 @@ class TradeBroker:
         for prop in self.client.properties:
             if largest is None:
                 largest = prop.set_attribute()
-            if completions[prop.set_attribute] > completions[largest]:
+            if completions[prop.set_attribute()] > completions[largest]:
                 largest = prop.set_attribute()
         return largest
 
@@ -214,6 +214,14 @@ class TradeDeal:
 class TradeManager:
     @staticmethod
     def run_best_trade(client):
+
+        # Make sure at least 14 properties have been bought
+        unowned_properties = [curr_tile for curr_tile in client.game.board if
+                              isinstance(curr_tile, Property) and not curr_tile.owner]
+        if len(unowned_properties) < 14:
+            return
+        del unowned_properties
+
         broker = TradeBroker(client)
         other_player = broker.best_trader_match()
         other_broker = TradeBroker(client)
@@ -229,10 +237,10 @@ class TradeManager:
 
         values = broker.assign_property_values()
         for prop in deal.player2acquisitions:
-            player1value += values[prop]
+            player1value += values[prop.name] if prop.name in values else 0
 
         values = other_broker.assign_property_values()
         for prop in deal.player1acquisitions:
-            player2value += values[prop]
+            player2value += values[prop.name] if prop.name in values else 0
 
         deal.execute()
