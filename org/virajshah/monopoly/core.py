@@ -3,7 +3,6 @@ from org.virajshah.monopoly.banker import TradeManager
 from org.virajshah.monopoly.logger import Logger, InfoLog, RentTransactionLog
 from org.virajshah.monopoly.records import TurnHistoryRecord
 from org.virajshah.monopoly.tiles import TileAttribute
-from org.virajshah.monopoly.core import Player
 from random import randrange
 
 JAIL_INDEX = 10
@@ -19,7 +18,7 @@ class MonopolyGame:
         self.bankrupted_players = []
         self.curr_player = -1
 
-    def add_player(self, player: Player):
+    def add_player(self, player: "Player"):
         if isinstance(player, Player):
             self.players.append(player)
             player.game = self
@@ -92,9 +91,11 @@ class MonopolyGame:
             self.players.remove(player)
             logger.log(InfoLog("{} is now bankrupt (${}). Removing from the game.".format(player.name, player.balance)))
 
-        # TODO: Log turn history record
+        player.turn_history.append(turn)
+        self.log_all_player_updates()
 
-    # TODO: Write method for logAllPlayerUpdates()
+    def log_all_player_updates(self):
+        pass  # TODO: Implement this
 
 
 class Player:
@@ -109,7 +110,7 @@ class Player:
         self.prisoner = False
         self.game = None  # Game is assigned by MonopolyGame
 
-    def send_money(self, amount: int, other_player: Player):
+    def send_money(self, amount: int, other_player: "Player"):
         self.add_money(-amount)
         other_player.add_money(amount)
 

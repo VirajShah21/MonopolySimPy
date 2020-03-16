@@ -41,7 +41,7 @@ class RentTransactionLog(TransactionLog):
 
 class Logger:
     def __init__(self):
-        pass
+        self.logs = []
 
     def log(self, data: Log):
         print(data.message)

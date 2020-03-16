@@ -68,8 +68,9 @@ class Property(Tile, ABC):
         super().__init__(name, **kwargs)
         self.price = price
         self.owner = None  # Player
+        self.mortgaged = False
 
-    def get_set_attribute(self) -> TileAttribute:
+    def get_set_attribute(self) -> TileAttribute | None:
         for attr in self.attributes:
             if TileAttribute.is_set_attribute(attr):
                 return attr
@@ -96,7 +97,12 @@ class Property(Tile, ABC):
         purchaser.properties.append(self)
 
     def mortgage(self):
-        pass  # TODO: implement this
+        self.mortgaged = True
+        self.owner.add_money(0.5 * self.price)
+
+    def unmortgage(self):
+        self.mortgaged = False
+        self.owner.add_money(-1.1 * 0.5 * self.price)  # Unmortgage = 110% of mortgage price
 
     def transfer_ownership(self, new_owner: Player):
         self.owner.properties.remove(self)
