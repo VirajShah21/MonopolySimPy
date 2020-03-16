@@ -116,6 +116,9 @@ class Player:
     def add_money(self, amount: int):
         self.balance += amount
 
+    def __str__(self):
+        return self.name
+
 
 class TileAttribute(Enum):
     GO = 1
@@ -248,6 +251,17 @@ class ColoredProperty(Property):
     def rent(self, **kwargs) -> int:
         return self.rents[self.houses]
 
+    def __str__(self):
+        end_tag = ""
+        if self.is_monopoly_completed():
+            if self.houses == 0:
+                end_tag = "(Monopoly)"
+            elif self.houses < 5:
+                end_tag = "({} houses)".format(self.houses)
+            else:
+                end_tag = "(w/ Hotel)"
+        return "{} {}".format(self.name, end_tag)
+
 
 class NonColoredProperty(Property):
     # Inherited Fields
@@ -270,70 +284,8 @@ class NonColoredProperty(Property):
                     count += 1
             return kwargs["roll"] * (10 if count == 2 else 4)
 
-
-def build_board():
-    chance_label = "Chance"
-    chest_label = "Community Chest"
-    return [BasicTile("Go", attribute=TileAttribute.GO),
-            ColoredProperty("Mediterranean Avenue", 60, [2, 10, 30, 90, 160, 250],
-                            TileAttribute.SET1),
-            BasicTile(chest_label, attribute=TileAttribute.CHEST),
-            ColoredProperty("Baltic Avenue", 60, [4, 20, 60, 180, 320, 450], TileAttribute.SET1),
-            BasicTile("Tax", attribute=TileAttribute.TAX),
-            NonColoredProperty("Reading Railroad", TileAttribute.RAILROAD),
-            ColoredProperty("Oriental Avenue", 100, [6, 30, 90, 270, 400, 550],
-                            TileAttribute.SET2),
-            BasicTile(chance_label, attribute=TileAttribute.CHANCE),
-            ColoredProperty("Vermont Avenue", 100, [6, 30, 90, 270, 400, 550], TileAttribute.SET2),
-            ColoredProperty("Connecticut Avenue", 120, [8, 40, 100, 300, 450, 600],
-                            TileAttribute.SET2),
-            BasicTile("Jail", attribute=TileAttribute.JAIL),
-            ColoredProperty("St. Charles Place", 140, [10, 50, 150, 450, 625, 750],
-                            TileAttribute.SET3),
-            NonColoredProperty("Electric Company", TileAttribute.UTILITY),
-            ColoredProperty("States Avenue", 140, [10, 50, 150, 450, 625, 750],
-                            TileAttribute.SET3),
-            ColoredProperty("Virginia Avenue", 160, [12, 60, 180, 500, 700, 900],
-                            TileAttribute.SET3),
-            NonColoredProperty("Pennsylvania Railroad", TileAttribute.RAILROAD),
-            ColoredProperty("St. James Place", 180, [14, 70, 200, 550, 750, 950],
-                            TileAttribute.SET4),
-            BasicTile(chest_label, attribute=TileAttribute.CHEST),
-            ColoredProperty("Tennessee Avenue", 180, [14, 70, 200, 550, 750, 950],
-                            TileAttribute.SET4),
-            ColoredProperty("New York Avenue", 200, [16, 80, 220, 600, 800, 1000],
-                            TileAttribute.SET4),
-            BasicTile("Free Parking", attribute=TileAttribute.FREE_PARKING),
-            ColoredProperty("Kentucky Avenue", 220, [18, 90, 250, 700, 875, 1050],
-                            TileAttribute.SET5),
-            BasicTile(chance_label, attribute=TileAttribute.CHANCE),
-            ColoredProperty("Indiana Avenue", 220, [18, 90, 250, 700, 875, 1050],
-                            TileAttribute.SET5),
-            ColoredProperty("Illinois Avenue", 240, [20, 100, 300, 750, 925, 1100],
-                            TileAttribute.SET5),
-            NonColoredProperty("B. & O. Railroad", TileAttribute.RAILROAD),
-            ColoredProperty("Atlantic Avenue", 260, [22, 110, 330, 800, 975, 1150],
-                            TileAttribute.SET6),
-            ColoredProperty("Ventnor Avenue", 260, [22, 110, 330, 800, 975, 1150],
-                            TileAttribute.SET6),
-            NonColoredProperty("Waterworks", TileAttribute.RAILROAD),
-            ColoredProperty("Marvin Gardens", 280, [24, 120, 360, 850, 1025, 1200],
-                            TileAttribute.SET6),
-            BasicTile("Go to Jail", attribute=TileAttribute.GO_TO_JAIL),
-            ColoredProperty("Pacific Avenue", 300, [26, 130, 390, 900, 1100, 1275],
-                            TileAttribute.SET7),
-            ColoredProperty("North Carolina Avenue", 300, [26, 130, 390, 900, 1100, 1275],
-                            TileAttribute.SET7),
-            BasicTile(chest_label, attribute=TileAttribute.CHEST),
-            ColoredProperty("Pennsylvania Avenue", 320, [28, 150, 450, 1000, 1200, 1400],
-                            TileAttribute.SET7),
-            NonColoredProperty("Short Line", TileAttribute.RAILROAD),
-            BasicTile(chance_label, attribute=TileAttribute.CHANCE),
-            ColoredProperty("Park Place", 350, [35, 175, 500, 1100, 1300, 1500],
-                            TileAttribute.SET8),
-            BasicTile("Tax", attribute=TileAttribute.TAX),
-            ColoredProperty("Boardwalk", 400, [50, 200, 600, 1400, 1700, 2000],
-                            TileAttribute.SET8)]
+    def __str__(self):
+        pass  # TODO: Implement this to conform to something similar to ColoredProperty
 
 
 class MortgageManager:
@@ -448,7 +400,7 @@ class TradeBroker:
     def __init__(self, client: Player):
         self.client = client
 
-    def assign_property_values(self) -> Dict[Property, int]:
+    def assign_property_values(self) -> Dict[str, int]:
         values = {}
 
         for prop in self.client.properties:
@@ -464,7 +416,7 @@ class TradeBroker:
                 value *= 2
             else:
                 value *= 1.5
-            values[prop.name] = value
+            values[prop.name] = int(value)
 
         return values
 
@@ -578,4 +530,71 @@ class TradeManager:
         for prop in deal.player1acquisitions:
             player2value += values[prop.name] if prop.name in values else 0
 
+        deal.compensation = player2value - player1value
+
         deal.execute()
+
+
+def build_board():
+    chance_label = "Chance"
+    chest_label = "Community Chest"
+    return [BasicTile("Go", attribute=TileAttribute.GO),
+            ColoredProperty("Mediterranean Avenue", 60, [2, 10, 30, 90, 160, 250],
+                            TileAttribute.SET1),
+            BasicTile(chest_label, attribute=TileAttribute.CHEST),
+            ColoredProperty("Baltic Avenue", 60, [4, 20, 60, 180, 320, 450], TileAttribute.SET1),
+            BasicTile("Tax", attribute=TileAttribute.TAX),
+            NonColoredProperty("Reading Railroad", TileAttribute.RAILROAD),
+            ColoredProperty("Oriental Avenue", 100, [6, 30, 90, 270, 400, 550],
+                            TileAttribute.SET2),
+            BasicTile(chance_label, attribute=TileAttribute.CHANCE),
+            ColoredProperty("Vermont Avenue", 100, [6, 30, 90, 270, 400, 550], TileAttribute.SET2),
+            ColoredProperty("Connecticut Avenue", 120, [8, 40, 100, 300, 450, 600],
+                            TileAttribute.SET2),
+            BasicTile("Jail", attribute=TileAttribute.JAIL),
+            ColoredProperty("St. Charles Place", 140, [10, 50, 150, 450, 625, 750],
+                            TileAttribute.SET3),
+            NonColoredProperty("Electric Company", TileAttribute.UTILITY),
+            ColoredProperty("States Avenue", 140, [10, 50, 150, 450, 625, 750],
+                            TileAttribute.SET3),
+            ColoredProperty("Virginia Avenue", 160, [12, 60, 180, 500, 700, 900],
+                            TileAttribute.SET3),
+            NonColoredProperty("Pennsylvania Railroad", TileAttribute.RAILROAD),
+            ColoredProperty("St. James Place", 180, [14, 70, 200, 550, 750, 950],
+                            TileAttribute.SET4),
+            BasicTile(chest_label, attribute=TileAttribute.CHEST),
+            ColoredProperty("Tennessee Avenue", 180, [14, 70, 200, 550, 750, 950],
+                            TileAttribute.SET4),
+            ColoredProperty("New York Avenue", 200, [16, 80, 220, 600, 800, 1000],
+                            TileAttribute.SET4),
+            BasicTile("Free Parking", attribute=TileAttribute.FREE_PARKING),
+            ColoredProperty("Kentucky Avenue", 220, [18, 90, 250, 700, 875, 1050],
+                            TileAttribute.SET5),
+            BasicTile(chance_label, attribute=TileAttribute.CHANCE),
+            ColoredProperty("Indiana Avenue", 220, [18, 90, 250, 700, 875, 1050],
+                            TileAttribute.SET5),
+            ColoredProperty("Illinois Avenue", 240, [20, 100, 300, 750, 925, 1100],
+                            TileAttribute.SET5),
+            NonColoredProperty("B. & O. Railroad", TileAttribute.RAILROAD),
+            ColoredProperty("Atlantic Avenue", 260, [22, 110, 330, 800, 975, 1150],
+                            TileAttribute.SET6),
+            ColoredProperty("Ventnor Avenue", 260, [22, 110, 330, 800, 975, 1150],
+                            TileAttribute.SET6),
+            NonColoredProperty("Waterworks", TileAttribute.RAILROAD),
+            ColoredProperty("Marvin Gardens", 280, [24, 120, 360, 850, 1025, 1200],
+                            TileAttribute.SET6),
+            BasicTile("Go to Jail", attribute=TileAttribute.GO_TO_JAIL),
+            ColoredProperty("Pacific Avenue", 300, [26, 130, 390, 900, 1100, 1275],
+                            TileAttribute.SET7),
+            ColoredProperty("North Carolina Avenue", 300, [26, 130, 390, 900, 1100, 1275],
+                            TileAttribute.SET7),
+            BasicTile(chest_label, attribute=TileAttribute.CHEST),
+            ColoredProperty("Pennsylvania Avenue", 320, [28, 150, 450, 1000, 1200, 1400],
+                            TileAttribute.SET7),
+            NonColoredProperty("Short Line", TileAttribute.RAILROAD),
+            BasicTile(chance_label, attribute=TileAttribute.CHANCE),
+            ColoredProperty("Park Place", 350, [35, 175, 500, 1100, 1300, 1500],
+                            TileAttribute.SET8),
+            BasicTile("Tax", attribute=TileAttribute.TAX),
+            ColoredProperty("Boardwalk", 400, [50, 200, 600, 1400, 1700, 2000],
+                            TileAttribute.SET8)]
