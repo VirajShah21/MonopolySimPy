@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Union
+from typing import List, Union, Dict
 
-from org.virajshah.monopoly.banker import TradeManager
 from org.virajshah.monopoly.logger import Logger
 from org.virajshah.monopoly.records import TurnHistoryRecord
 from random import randrange
@@ -335,3 +334,248 @@ def build_board():
             BasicTile("Tax", attribute=TileAttribute.TAX),
             ColoredProperty("Boardwalk", 400, [50, 200, 600, 1400, 1700, 2000],
                             TileAttribute.SET8)]
+
+
+class MortgageManager:
+    # Fields: Player client, TradeBroker broker
+
+    def __init__(self, client: Player):
+        self.client = client
+        self.broker = TradeBroker(client)
+
+    def force_mortgage(self, threshold: int) -> int:
+        liquidated = 0
+
+        liquidated += self.liquidate(self.class_f_properties(), threshold)
+        if liquidated < threshold:
+            self.liquidate(self.class_e_properties(), threshold)
+            if liquidated < threshold:
+                self.liquidate(self.class_d_properties(), threshold)
+                if liquidated < threshold:
+                    self.liquidate(self.class_c_properties(), threshold)
+                    if liquidated < threshold:
+                        self.liquidate(self.class_b_properties(), threshold)
+                        if liquidated < threshold:
+                            self.liquidate(self.class_a_properties(), threshold)
+        return liquidated
+
+    @staticmethod
+    def liquidate(to_liquidate: List[Property], threshold: int) -> int:
+        liquidated = 0
+        for prop in to_liquidate:
+            if not prop.mortgaged:
+                prop.mortgaged = True
+                liquidated += prop.price / 2
+
+            if liquidated >= threshold:
+                return liquidated
+        return liquidated
+
+    # Class A Properties - Colored properties in a monopoly set with a hotel on all properties in the set
+    # Class B Properties - Colored properties with at least one hotel on the set
+    # Class C Properties - Colored properties with at least one house on each property
+    # Class D Properties - Properties as part of a completed monopoly set
+    # Class E Properties - 50% or more completed sets
+    # Class F Properties - Any other property
+
+    def class_a_properties(self) -> List[Property]:
+        out = []
+        for prop in self.client.properties:
+            if isinstance(prop, ColoredProperty) and prop.is_monopoly_completed():
+                monopoly_set = [prop for prop in self.client.properties if prop.get_set_attribute() in prop.attributes]
+                flag = True
+                for set_prop in monopoly_set:
+                    if set_prop.houses != 5:
+                        flag = False
+                if flag:
+                    out.append(prop)
+        return out
+
+    def class_b_properties(self) -> List[Property]:
+        out = []
+        conflicts = self.class_a_properties()
+        for prop in self.client.properties:
+            if prop in conflicts:
+                continue
+            for set_prop in self.client.properties:
+                if set_prop.get_set_attribute() == prop.get_set_attribute() and set_prop.houses == 5:
+                    out.append(prop)
+        return out
+
+    def class_c_properties(self) -> List[Property]:
+        out = []
+        conflicts = self.class_a_properties() + self.class_b_properties()
+
+        for prop in self.client.properties:
+            if prop in conflicts:
+                continue
+            flag = True
+            for set_prop in self.client.properties:
+                if set_prop.houses == 0:
+                    flag = False
+            if flag:
+                out.append(prop)
+        return out
+
+    def class_d_properties(self) -> List[Property]:
+        conflicts = self.class_a_properties() + self.class_b_properties() + self.class_c_properties()
+        return [prop for prop in self.client.properties if prop not in conflicts and prop.is_monopoly_completed()]
+
+    def class_e_properties(self) -> List[Property]:
+        conflicts = self.class_a_properties() + self.class_b_properties()
+        conflicts += self.class_c_properties() + self.class_d_properties()
+
+        return [prop for prop in self.client.properties if
+                prop not in conflicts and self.broker.attribute_completion(prop.get_set_attribute()) >= 0.5]
+
+    def class_f_properties(self) -> List[Property]:
+        conflicts = self.class_a_properties() + self.class_b_properties() + self.class_c_properties()
+        conflicts += self.class_d_properties() + self.class_e_properties()
+        return [prop for prop in self.client.properties if prop not in conflicts]
+
+
+class TradeBroker:
+    # Fields: Player client
+
+    @staticmethod
+    def count_properties_with_attribute(player: Player, attr: TileAttribute) -> int:
+        count = 0
+        for prop in player.properties:
+            if attr in prop.attributes:
+                count += 1
+        return count
+
+    def __init__(self, client: Player):
+        self.client = client
+
+    def assign_property_values(self) -> Dict[Property, int]:
+        values = {}
+
+        for prop in self.client.properties:
+            value = prop.price
+
+            if self.attribute_completion(prop.get_set_attribute()) == 1:
+                if isinstance(prop, ColoredProperty):
+                    value += self.houses_on_set(prop.get_set_attribute()) * prop.house_cost()
+                value *= 4
+            elif self.attribute_completion(prop.get_set_attribute()) >= 0.66:
+                value *= 3
+            elif self.attribute_completion(prop.get_set_attribute()) >= 0.5:
+                value *= 2
+            else:
+                value *= 1.5
+            values[prop.name] = value
+
+        return values
+
+    def attribute_completion(self, attr: TileAttribute) -> float:
+        count = 0
+        total = 0
+
+        for prop in self.client.properties:
+            if attr in prop.attributes:
+                count += 1
+
+        for tile in self.client.game.board:
+            if attr in tile.attributes:
+                total += 1
+
+        return float(count) / total if total != 0 else 0
+
+    def attribute_completions(self) -> Dict[Property, float]:
+        out = {}
+        for prop in self.client.properties:
+            out[prop.get_set_attribute()] = self.attribute_completion(prop.get_set_attribute())
+        return out
+
+    def houses_on_set(self, set_attr: TileAttribute) -> int:
+        count = 0
+        for prop in self.client.properties:
+            if isinstance(prop, ColoredProperty) and set_attr in prop.attributes:
+                count += prop.houses
+        return count
+
+    def most_wanted_set(self) -> TileAttribute:
+        completions = self.attribute_completions()
+        largest = None
+
+        for prop in self.client.properties:
+            if largest is None:
+                largest = prop.get_set_attribute()
+            if completions[prop.get_set_attribute()] > completions[largest]:
+                largest = prop.get_set_attribute()
+        return largest
+
+    def best_trader_match(self) -> Player:
+        players = self.client.game.players
+        best = players[0]
+        most_wanted_set = self.most_wanted_set()  # Attribute
+
+        for player in players:
+            if self.count_properties_with_attribute(player, most_wanted_set) > self.count_properties_with_attribute(
+                    best,
+                    most_wanted_set):
+                best = player
+        return best
+
+
+class TradeDeal:
+    # Fields: Player player1, Player player2, Property[] player1acquisitions, Property[] player2acquisitions
+    #         int compensation
+
+    def __init__(self, p1: Player, p2: Player):
+        self.player1 = p1
+        self.player2 = p2
+        self.player1acquisitions = []
+        self.player2acquisitions = []
+        self.compensation = 0
+
+    def execute(self):
+        if self.compensation > 0:
+            Logger.log("{} payed {} ${}".format(self.player1, self.player2, self.compensation))
+        elif self.compensation < 0:
+            Logger.log("{} payed {} ${}".format(self.player2, self.player1, self.compensation))
+
+        for prop in self.player1acquisitions:
+            prop.transfer_ownership(self.player1)
+
+        for prop in self.player2acquisitions:
+            prop.transfer_ownership(self.player2)
+
+        self.player1.add_money(-self.compensation)
+        self.player2.add_money(self.compensation)
+
+
+class TradeManager:
+    @staticmethod
+    def run_best_trade(client: Player):
+
+        # Make sure at least 14 properties have been bought
+        unowned_properties = [curr_tile for curr_tile in client.game.board if
+                              isinstance(curr_tile, Property) and not curr_tile.owner]
+        if len(unowned_properties) < 14:
+            return
+        del unowned_properties
+
+        broker = TradeBroker(client)
+        other_player = broker.best_trader_match()
+        other_broker = TradeBroker(client)
+        deal = TradeDeal(client, other_player)
+        receiving = broker.most_wanted_set()
+        giving = other_broker.most_wanted_set()
+
+        deal.player1acquisitions = [prop for prop in other_player.properties if receiving in prop.attributes]
+        deal.player2acquisitions = [prop for prop in client.properties if giving in prop.attributes]
+
+        player1value = 0
+        player2value = 0
+
+        values = broker.assign_property_values()
+        for prop in deal.player2acquisitions:
+            player1value += values[prop.name] if prop.name in values else 0
+
+        values = other_broker.assign_property_values()
+        for prop in deal.player1acquisitions:
+            player2value += values[prop.name] if prop.name in values else 0
+
+        deal.execute()

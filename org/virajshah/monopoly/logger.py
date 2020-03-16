@@ -24,17 +24,17 @@ class Logger:
         buffer.close()
 
 
-def generate_logstr(message):
+def generate_logstr(message: str) -> str:
     buffer = ""
     if include_date:
         today = datetime.date.today()
-        buffer += "[ {}-{}-{}".format(today.year, today.month, today.day)
+        buffer += "[ {}-{}-{}".format(str(today.year).zfill(4), str(today.month).zfill(2), str(today.day).zfill(2))
         if include_time:
-            now = datetime.time()
-            buffer += " | {}:{}:{} ] ".format(now.hour, now.minute, now.microsecond)
+            now = datetime.datetime.now()
+            buffer += " | {}:{}:{} ] ".format(str(now.hour).zfill(2), str(now.minute).zfill(2), now.microsecond)
         else:
             buffer += " ] "
     elif include_time:
-        now = datetime.time()
-        buffer += "[ {}:{}:{} ] ".format(now.hour, now.minute, now.microsecond)
+        now = datetime.datetime.now()
+        buffer += "[ {}:{}:{} ] ".format(str(now.hour).zfill(2), str(now.minute).zfill(2), now.microsecond)
     return "{}\t{}".format(buffer, message)
