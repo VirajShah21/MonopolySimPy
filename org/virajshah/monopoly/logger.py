@@ -1,26 +1,40 @@
-printing_enabled = False
+import datetime
+
+printing_enabled = True
+include_date = True
+include_time = True
 logs = []
 
 
 class Logger:
-    def __init__(self):
-        self.logs = []
-
-    def log(self, message: str):
+    @staticmethod
+    def log(message: str):
+        to_log = generate_logstr(message)
         if printing_enabled:
-            print(message)
-        self.logs.append(message)
+            print(to_log)
+        logs.append(to_log)
 
-    def save(self, filename: str):
+    @staticmethod
+    def save(filename: str):
         buffer = open(filename, "w")
         text = ""
-        for log in self.logs:
+        for log in logs:
             text += str(log) + "\n"
         buffer.write(text)
         buffer.close()
 
-    def __int__(self):
-        return len(self.logs)
 
-    def __str__(self):
-        return "Logger({})".format(__name__)
+def generate_logstr(message):
+    buffer = ""
+    if include_date:
+        today = datetime.date.today()
+        buffer += "[ {}-{}-{}".format(today.year, today.month, today.day)
+        if include_time:
+            now = datetime.time()
+            buffer += " | {}:{}:{} ] ".format(now.hour, now.minute, now.microsecond)
+        else:
+            buffer += " ] "
+    elif include_time:
+        now = datetime.time()
+        buffer += "[ {}:{}:{} ] ".format(now.hour, now.minute, now.microsecond)
+    return "{}\t{}".format(buffer, message)
