@@ -6,10 +6,12 @@ log_configuration = {
     "no_print": []
 }
 
+logs = []
+
 
 class Logger:
     def __init__(self):
-        self.logs = []
+        pass
 
     def log(self, data):
         print(data.message)

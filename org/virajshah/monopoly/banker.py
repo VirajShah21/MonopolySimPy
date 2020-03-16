@@ -1,5 +1,7 @@
+from .logger import Logger, TransactionLog
 from .tiles import ColoredProperty, Property
 
+logger = Logger()
 
 class MortgageManager:
     # Fields: Player client, TradeBroker broker
@@ -197,9 +199,9 @@ class TradeDeal:
 
     def execute(self):
         if self.compensation > 0:
-            pass  # TODO: fill this
+            logger.log(TransactionLog(self.player1, self.player2, self.compensation))
         elif self.compensation < 0:
-            pass  # TODO: fill this
+            logger.log(TransactionLog(self.player2, self.player1, self.compensation))
 
         for prop in self.player1acquisitions:
             prop.transfer_ownership(self.player1)
