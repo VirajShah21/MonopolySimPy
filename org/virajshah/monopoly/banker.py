@@ -1,8 +1,7 @@
 from typing import List, Dict
 
-from .logger import Logger, TransactionLog
-from .tiles import ColoredProperty, Property, TileAttribute
-from org.virajshah.monopoly.core import Player
+from org.virajshah.monopoly.logger import Logger
+from org.virajshah.monopoly.core import Player, ColoredProperty, Property, TileAttribute
 
 logger = Logger()
 
@@ -127,7 +126,7 @@ class TradeBroker:
 
             if self.attribute_completion(prop.get_set_attribute()) == 1:
                 if isinstance(prop, ColoredProperty):
-                    value += self.houses_on_set(prop.get_set_attribute() * prop.house_cost())
+                    value += self.houses_on_set(prop.get_set_attribute()) * prop.house_cost()
                 value *= 4
             elif self.attribute_completion(prop.get_set_attribute()) >= 0.66:
                 value *= 3
@@ -203,9 +202,9 @@ class TradeDeal:
 
     def execute(self):
         if self.compensation > 0:
-            logger.log(TransactionLog(self.player1, self.player2, self.compensation))
+            logger.log("{} payed {} ${}".format(self.player1, self.player2, self.compensation))
         elif self.compensation < 0:
-            logger.log(TransactionLog(self.player2, self.player1, self.compensation))
+            logger.log("{} payed {} ${}".format(self.player2, self.player1, self.compensation))
 
         for prop in self.player1acquisitions:
             prop.transfer_ownership(self.player1)
