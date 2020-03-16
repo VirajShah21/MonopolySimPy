@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import List
+
+from org.virajshah.monopoly.core import Player
 
 CHANCE_LABEL = "Chance"
 CHEST_LABEL = "Community Chest"
@@ -29,7 +32,7 @@ class TileAttribute(Enum):
     MORTGAGED = 21
 
     @staticmethod
-    def is_set_attribute(attr):
+    def is_set_attribute(attr: int) -> bool:
         return attr in [TileAttribute.SET1, TileAttribute.SET2, TileAttribute.SET3, TileAttribute.SET4,
                         TileAttribute.SET5, TileAttribute.SET6, TileAttribute.SET7, TileAttribute.SET8,
                         TileAttribute.RAILROAD, TileAttribute.UTILITY]
@@ -37,7 +40,7 @@ class TileAttribute(Enum):
 
 class Tile(ABC):
     # Fields: str name, TileAttribute[] attributes
-    def __init__(self, name, **kwargs):
+    def __init__(self, name: str, **kwargs):
         self.name = name
         if "attribute" in kwargs:
             self.attributes = [kwargs["attribute"]]
@@ -53,7 +56,7 @@ class Tile(ABC):
 class BasicTile(Tile):
     # Inherited Fields
     #       Tile: str name, TileAttribute[] attributes
-    def __init__(self, name, **kwargs):
+    def __init__(self, name: str, **kwargs):
         super().__init__(name, **kwargs)
 
 
@@ -61,24 +64,24 @@ class Property(Tile, ABC):
     # Inherited Fields
     #       Tile: str name, TileAttribute[] attributes
     # Fields: int price, Player owner
-    def __init__(self, name, price, **kwargs):
+    def __init__(self, name: str, price: int, **kwargs):
         super().__init__(name, **kwargs)
         self.price = price
         self.owner = None  # Player
 
-    def set_attribute(self):
+    def get_set_attribute(self) -> TileAttribute:
         for attr in self.attributes:
             if TileAttribute.is_set_attribute(attr):
                 return attr
         return None
 
-    def is_monopoly_completed(self):
+    def is_monopoly_completed(self) -> bool:
         count = 0
         for prop in self.owner.properties:
-            if prop.set_attribute() == self.set_attribute():
+            if prop.get_set_attribute() == self.get_set_attribute():
                 count += 1
 
-        set_attr = self.set_attribute()
+        set_attr = self.get_set_attribute()
 
         if set_attr == TileAttribute.SET1 or set_attr == TileAttribute.SET8 or set_attr == TileAttribute.UTILITY:
             return count == 2
@@ -87,15 +90,15 @@ class Property(Tile, ABC):
         else:
             return count == 3
 
-    def purchase(self, purchaser):
+    def purchase(self, purchaser: Player):
         self.owner = purchaser
         purchaser.add_money(-self.price)
         purchaser.properties.append(self)
 
     def mortgage(self):
-        pass  # implement this
+        pass  # TODO: implement this
 
-    def transfer_ownership(self, new_owner):
+    def transfer_ownership(self, new_owner: Player):
         self.owner.properties.remove(self)
         self.owner = new_owner
         new_owner.properties.append(self)
@@ -110,14 +113,14 @@ class ColoredProperty(Property):
     #       Tile: str name, TileAttribute[] attributes
     #       Property: int price, Player owner
     # Fields: int[] rents, int houses
-    def __init__(self, name, price, rent_list, set_attribute):
+    def __init__(self, name: str, price: int, rent_list: List[int], set_attribute: TileAttribute):
         super().__init__(name, price,
                          attributes=[TileAttribute.PROPERTY, set_attribute, TileAttribute.COLORED_PROPERTY])
         self.rents = rent_list
         self.houses = 0
 
-    def house_cost(self):
-        set_attr = self.set_attribute()  # TileAttribute
+    def house_cost(self) -> int:
+        set_attr = self.get_set_attribute()  # TileAttribute
         if set_attr == TileAttribute.SET1 or set_attr == TileAttribute.SET2:
             return 50
         elif set_attr == TileAttribute.SET3 or set_attr == TileAttribute.SET4:
@@ -127,7 +130,7 @@ class ColoredProperty(Property):
         elif set_attr == TileAttribute.SET7 or set_attr == TileAttribute.SET8:
             return 200
 
-    def rent(self, **kwargs):
+    def rent(self, **kwargs) -> int:
         return self.rents[self.houses]
 
 
@@ -135,20 +138,20 @@ class NonColoredProperty(Property):
     # Inherited Fields
     #       Tile: str name, TileAttribute[] attributes
     # Fields: int price, Player owner
-    def __init__(self, name, prop_type):
+    def __init__(self, name: str, prop_type: TileAttribute):
         super().__init__(name, 200 if prop_type == TileAttribute.RAILROAD else 150)
 
-    def rent(self, **kwargs):
+    def rent(self, **kwargs) -> int:
         if TileAttribute.RAILROAD in self.attributes:
             count = 0
             for prop in self.owner.properties:
-                if prop.set_attribute() == TileAttribute.RAILROAD:
+                if prop.get_set_attribute() == TileAttribute.RAILROAD:
                     count += 1
             return (2 ** (count - 1)) * 25
         else:
             count = 0
             for prop in self.owner.properties:
-                if prop.set_attribute() == TileAttribute.UTILITY:
+                if prop.get_set_attribute() == TileAttribute.UTILITY:
                     count += 1
             return kwargs["roll"] * (10 if count == 2 else 4)
 

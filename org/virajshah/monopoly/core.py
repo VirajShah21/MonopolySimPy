@@ -3,6 +3,7 @@ from org.virajshah.monopoly.banker import TradeManager
 from org.virajshah.monopoly.logger import Logger, InfoLog, RentTransactionLog
 from org.virajshah.monopoly.records import TurnHistoryRecord
 from org.virajshah.monopoly.tiles import TileAttribute
+from org.virajshah.monopoly.core import Player
 from random import randrange
 
 JAIL_INDEX = 10
@@ -18,7 +19,7 @@ class MonopolyGame:
         self.bankrupted_players = []
         self.curr_player = -1
 
-    def add_player(self, player):
+    def add_player(self, player: Player):
         if isinstance(player, Player):
             self.players.append(player)
             player.game = self
@@ -99,17 +100,18 @@ class MonopolyGame:
 class Player:
     # Fields: str name, int balance, int position, TurnHistoryRecord turn_history, PropertyTile[] properties,
     #         bool prisoner
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name  # str
         self.balance = 1500
         self.position = 0
         self.turn_history = []
         self.properties = []
         self.prisoner = False
+        self.game = None  # Game is assigned by MonopolyGame
 
-    def send_money(self, amount, other):
+    def send_money(self, amount: int, other_player: Player):
         self.add_money(-amount)
-        other.add_money(amount)
+        other_player.add_money(amount)
 
-    def add_money(self, amount):
+    def add_money(self, amount: int):
         self.balance += amount
