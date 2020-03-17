@@ -1,3 +1,6 @@
+from abc import ABC
+
+
 class TurnHistoryRecord:
     def __init__(self):
         self.turn_number = 0
@@ -11,3 +14,20 @@ class TurnHistoryRecord:
         self.recent_balance = 0
         self.new_properties = []
         self.lost_properties = []
+
+
+class InvestmentRecord:
+    def __init__(self):
+        self.property = None
+        self.purchased_turn = 0
+        self.purchased_price = 0
+        self.status = "VOID"
+        self.owner = None
+        self.transactions = []
+
+
+class TransactionRecord(ABC):
+    def __init__(self):
+        self.payer = None
+        self.recipient = None
+        self.amount = 0

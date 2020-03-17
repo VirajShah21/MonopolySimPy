@@ -16,6 +16,7 @@ class MonopolyGame:
         self.players = []
         self.bankrupted_players = []
         self.curr_player = -1
+        self.turn_number = 0
 
     def add_player(self, player: "Player"):
         if isinstance(player, Player):
@@ -34,6 +35,7 @@ class MonopolyGame:
 
         player = self.players[self.curr_player]
         turn = TurnHistoryRecord()
+        self.turn_number = 0
 
         player.turn_history.append(turn)
         turn.turn_number = len(player.turn_history)
@@ -94,7 +96,9 @@ class MonopolyGame:
         self.log_all_player_updates()
 
     def log_all_player_updates(self):
-        pass  # TODO: Implement this
+        for player in self.players:
+            Logger.log(
+                "\t {} has ${} and {}".format(player.name, player.balance, [str(prop) for prop in player.properties]))
 
 
 class Player:
@@ -189,19 +193,24 @@ class Property(Tile, ABC):
         return None
 
     def is_monopoly_completed(self) -> bool:
-        count = 0
-        for prop in self.owner.properties:
-            if prop.get_set_attribute() == self.get_set_attribute():
-                count += 1
+        return self.set_completion() == 1
 
+    def set_completion(self) -> float:
+        count = 0
         set_attr = self.get_set_attribute()
 
+        for prop in self.owner.properties:
+            if prop.get_set_attribute() == set_attr:
+                count += 1
+
+        count = float(count)
+
         if set_attr == TileAttribute.SET1 or set_attr == TileAttribute.SET8 or set_attr == TileAttribute.UTILITY:
-            return count == 2
+            return count / 2
         elif set_attr == TileAttribute.RAILROAD:
-            return count == 4
+            return count / 4
         else:
-            return count == 3
+            return count / 3
 
     def purchase(self, purchaser: Player):
         self.owner = purchaser
@@ -252,7 +261,7 @@ class ColoredProperty(Property):
         return self.rents[self.houses]
 
     def __str__(self):
-        end_tag = ""
+        end_tag = None
         if self.is_monopoly_completed():
             if self.houses == 0:
                 end_tag = "(Monopoly)"
@@ -260,7 +269,7 @@ class ColoredProperty(Property):
                 end_tag = "({} houses)".format(self.houses)
             else:
                 end_tag = "(w/ Hotel)"
-        return "{} {}".format(self.name, end_tag)
+        return "{} {}".format(self.name, end_tag) if end_tag is not None else self.name
 
 
 class NonColoredProperty(Property):
@@ -285,7 +294,15 @@ class NonColoredProperty(Property):
             return kwargs["roll"] * (10 if count == 2 else 4)
 
     def __str__(self):
-        pass  # TODO: Implement this to conform to something similar to ColoredProperty
+        end_tag = None
+        if self.is_monopoly_completed():
+            end_tag = "(Monopoly)"
+        elif self.get_set_attribute() == TileAttribute.RAILROAD:
+            end_tag = "(x{})".format(int(self.set_completion() * 4))
+        elif self.get_set_attribute() == TileAttribute.UTILITY:
+            end_tag = "(x{})".format(int(self.set_completion() * 2))
+
+        return "{} {}".format(self.name, end_tag) if end_tag is not None else self.name
 
 
 class MortgageManager:
