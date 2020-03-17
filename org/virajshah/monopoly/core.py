@@ -36,7 +36,7 @@ class MonopolyGame:
 
         player: Player = self.players[self.curr_player]
         turn: TurnHistoryRecord = TurnHistoryRecord()
-        self.turn_number = 0
+        self.turn_number += 1
 
         player.turn_history.append(turn)
         turn.turn_number = len(player.turn_history)
@@ -84,6 +84,7 @@ class MonopolyGame:
             elif prop.owner and prop.owner != player:
                 rent_due = prop.rent(roll=(turn.dice_roll1 + turn.dice_roll2))
                 player.send_money(rent_due, prop.owner)
+                self.investment_tracker.rent_collected(prop.name, player.name, rent_due)
                 Logger.log("{} payed {} ${} for rent on {}".format(player, prop.owner, rent_due, prop))
 
         TradeManager.run_best_trade(player)
@@ -511,9 +512,17 @@ class TradeDeal:
 
         for prop in self.player1acquisitions:
             prop.transfer_ownership(self.player1)
+            avg_price: int = sum([prop.price for prop in self.player2acquisitions]) + self.compensation
+            avg_price /= len(self.player1acquisitions)
+            prop.owner.game.investment_tracker.track_property(prop.name, prop.owner.name, prop.owner.game.turn_number,
+                                                              avg_price)
 
         for prop in self.player2acquisitions:
             prop.transfer_ownership(self.player2)
+            avg_price: int = sum([prop.price for prop in self.player1acquisitions]) - self.compensation
+            avg_price /= len(self.player2acquisitions)
+            prop.owner.game.investment_tracker.track_property(prop.name, prop.owner.name, prop.owner.game.turn_number,
+                                                              avg_price)
 
         self.player1.add_money(-self.compensation)
         self.player2.add_money(self.compensation)

@@ -24,7 +24,7 @@ class InvestmentRecord:
         self.purchased_price: int = 0
         self.status: str = "VOID"
         self.owner: str = ""
-        self.transactions: List = []
+        self.transactions: List["TransactionRecord"] = []
 
     def __str__(self):
         out: str = "Property={} Purchased={}/${} Owner={} Status={} Transactions=" \
