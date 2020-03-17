@@ -1,33 +1,34 @@
 from abc import ABC
+from typing import List
 
 
 class TurnHistoryRecord:
     def __init__(self):
-        self.turn_number = 0
-        self.dice_roll1 = 0
-        self.dice_roll2 = 0
-        self.origin = 0
-        self.destination = 0
-        self.origin_in_jail = False
-        self.destination_in_jail = False
-        self.initial_balance = 0
-        self.recent_balance = 0
-        self.new_properties = []
-        self.lost_properties = []
+        self.turn_number: int = 0
+        self.dice_roll1: int = 0
+        self.dice_roll2: int = 0
+        self.origin: int = 0
+        self.destination: int = 0
+        self.origin_in_jail: bool = False
+        self.destination_in_jail: bool = False
+        self.initial_balance: int = 0
+        self.recent_balance: int = 0
+        self.new_properties: List[str] = []
+        self.lost_properties: List[str] = []
 
 
 class InvestmentRecord:
     def __init__(self):
-        self.property = None
-        self.purchased_turn = 0
-        self.purchased_price = 0
-        self.status = "VOID"
-        self.owner = None
-        self.transactions = []
+        self.property: str = ""
+        self.purchased_turn: int = 0
+        self.purchased_price: int = 0
+        self.status: str = "VOID"
+        self.owner: str = ""
+        self.transactions: List = []
 
 
 class TransactionRecord(ABC):
     def __init__(self):
-        self.payer = None
-        self.recipient = None
-        self.amount = 0
+        self.payer: str = ""
+        self.recipient: str = ""
+        self.amount: int = 0

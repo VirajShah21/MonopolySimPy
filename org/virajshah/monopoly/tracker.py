@@ -1,14 +1,14 @@
-from typing import Union
+from typing import Union, List
 
 from org.virajshah.monopoly.records import InvestmentRecord, TransactionRecord
 
 
 class InvestmentTracker:
     def __init__(self):
-        self.ledger = []
+        self.ledger: List[InvestmentRecord] = []
 
     def track_property(self, prop_name: str, owner: str, turn: int, price: int):
-        record = InvestmentRecord()
+        record: InvestmentRecord = InvestmentRecord()
         record.property = prop_name
         record.owner = owner
         record.purchased_turn = turn
@@ -23,9 +23,9 @@ class InvestmentTracker:
         return None
 
     def rent_collected(self, prop_name, payer, amount):
-        record = self.find_active(prop_name)
+        record: InvestmentRecord = self.find_active(prop_name)
         if record is not None:
-            transaction = TransactionRecord()
+            transaction: TransactionRecord = TransactionRecord()
             transaction.payer = payer
             transaction.recipient = record.owner
             transaction.amount = amount
