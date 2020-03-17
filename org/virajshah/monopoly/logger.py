@@ -1,4 +1,3 @@
-import datetime
 from typing import List, IO
 
 printing_enabled: bool = True

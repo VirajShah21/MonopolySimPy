@@ -369,9 +369,9 @@ class MortgageManager:
         for prop in self.client.properties:
             if prop in conflicts:
                 continue
+            prop_attr: TileAttribute = prop.get_set_attribute()
             for set_prop in self.client.properties:
-                if set_prop.get_set_attribute() == prop.get_set_attribute() and cast(ColoredProperty,
-                                                                                     set_prop).houses == 5:
+                if set_prop.get_set_attribute() == prop_attr and cast(ColoredProperty, set_prop).houses == 5:
                     out.append(prop)
         return out
 
@@ -426,14 +426,14 @@ class TradeBroker:
 
         for prop in self.client.properties:
             value: int = prop.price
-
-            if self.attribute_completion(prop.get_set_attribute()) == 1:
+            completion: float = self.attribute_completion(prop.get_set_attribute())
+            if completion == 1:
                 if isinstance(prop, ColoredProperty):
                     value += self.houses_on_set(prop.get_set_attribute()) * prop.house_cost()
                 value *= 4
-            elif self.attribute_completion(prop.get_set_attribute()) >= 0.66:
+            elif completion >= 0.66:
                 value *= 3
-            elif self.attribute_completion(prop.get_set_attribute()) >= 0.5:
+            elif completion >= 0.5:
                 value *= 2
             else:
                 value *= 1.5
