@@ -32,3 +32,9 @@ class InvestmentTracker:
             record.transactions.append(transaction)
         else:
             raise IndexError("No active record for '{}' could be found".format(prop_name))
+
+    def __str__(self):
+        out: str = ""
+        for record in self.ledger:
+            out += str(record) + "\n"
+        return out

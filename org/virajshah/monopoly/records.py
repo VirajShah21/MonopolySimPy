@@ -26,9 +26,24 @@ class InvestmentRecord:
         self.owner: str = ""
         self.transactions: List = []
 
+    def __str__(self):
+        out: str = "Property={} Purchased={}/${} Owner={} Status={} Transactions=" \
+            .format(self.property,
+                    self.purchased_turn,
+                    self.purchased_price,
+                    self.owner, self.status)
+
+        for transaction in self.transactions:
+            out += "\n\t" + str(transaction)
+
+        return out
+
 
 class TransactionRecord(ABC):
     def __init__(self):
         self.payer: str = ""
         self.recipient: str = ""
         self.amount: int = 0
+
+    def __str__(self):
+        return "{} --[ ${} ]--> {}".format(self.payer, self.amount, self.recipient)

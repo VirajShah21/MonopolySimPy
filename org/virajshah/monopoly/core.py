@@ -6,6 +6,8 @@ from org.virajshah.monopoly.logger import Logger
 from org.virajshah.monopoly.records import TurnHistoryRecord
 from random import randrange
 
+from org.virajshah.monopoly.tracker import InvestmentTracker
+
 JAIL_INDEX = 1
 
 
@@ -17,6 +19,7 @@ class MonopolyGame:
         self.bankrupted_players: List[Player] = []
         self.curr_player: int = -1
         self.turn_number: int = 0
+        self.investment_tracker: InvestmentTracker = InvestmentTracker()
 
     def add_player(self, player: "Player"):
         self.players.append(player)
@@ -75,7 +78,8 @@ class MonopolyGame:
 
             if not prop.owner and player.balance > prop.price:
                 prop.purchase(player)
-                turn.new_properties.append(player.position)
+                turn.new_properties.append(prop.name)
+                self.investment_tracker.track_property(prop.name, prop.owner.name, self.turn_number, prop.price)
                 Logger.log("{} purchased {} for ${}".format(player.name, prop.name, prop.price))
             elif prop.owner and prop.owner != player:
                 rent_due = prop.rent(roll=(turn.dice_roll1 + turn.dice_roll2))
@@ -94,9 +98,8 @@ class MonopolyGame:
         self.log_all_player_updates()
 
     def log_all_player_updates(self):
-        for player in self.players:
-            Logger.log(
-                "\t {} has ${} and {}".format(player.name, player.balance, [str(prop) for prop in player.properties]))
+        for p in self.players:
+            Logger.log("\t {} has ${} and {}".format(p.name, p.balance, [str(prop) for prop in p.properties]))
 
 
 class Player:

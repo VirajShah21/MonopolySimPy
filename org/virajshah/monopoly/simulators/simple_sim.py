@@ -1,4 +1,5 @@
 from org.virajshah.monopoly.core import MonopolyGame, Player
+from org.virajshah.monopoly.logger import Logger
 
 if __name__ == "__main__":
     game: MonopolyGame = MonopolyGame()
@@ -10,3 +11,5 @@ if __name__ == "__main__":
 
     while len(game.players) > 1:
         game.run_next_turn()
+
+    Logger.log(str(game.investment_tracker))
