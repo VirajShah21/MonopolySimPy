@@ -13,5 +13,5 @@ if __name__ == "__main__":
         game.run_next_turn()
 
     Logger.log(str(game.investment_tracker))
-    Logger.save("/tmp/monopolysimpy-lastrun.log")
+    Logger.save("/tmp/monopolysimpy-lastrun.html")
     game.investment_tracker.generate_html_table("/tmp/investment-tracker.html")

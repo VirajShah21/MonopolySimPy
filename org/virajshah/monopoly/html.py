@@ -9,22 +9,25 @@ class DOMElement:
         self.autoclose = False
 
         for key in kwargs:
-            if key not in ["children", "autoclose"]:
+            if key not in ["children", "autoclose", "classname"]:
                 self.attributes[key] = kwargs[key]
 
         self.children = kwargs["children"] if "children" in kwargs else []
 
         if "autoclose" in kwargs and kwargs["autoclose"] and len(self.children) == 0:
             self.autoclose = True
+        if "classname" in kwargs:
+            self.attributes["class"] = kwargs["classname"]
 
     def append_child(self, child):
         self.children.append(child)
-        if self.autoclose: self.autoclose = False
+        if self.autoclose:
+            self.autoclose = False
 
     def __str__(self):
         buffer: str = "<" + self.element
         for attr in self.attributes:
-            buffer += " {}={}".format(attr, self.attributes[attr])
+            buffer += ' {}="{}"'.format(attr, self.attributes[attr])
         if self.autoclose:
             buffer += "/>"
         else:

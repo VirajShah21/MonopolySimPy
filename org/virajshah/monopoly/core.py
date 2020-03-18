@@ -80,12 +80,13 @@ class MonopolyGame:
                 prop.purchase(player)
                 turn.new_properties.append(prop.name)
                 self.investment_tracker.track_property(prop.name, prop.owner.name, self.turn_number, prop.price)
-                Logger.log("{} purchased {} for ${}".format(player.name, prop.name, prop.price))
+                Logger.log("{} purchased {} for ${}".format(player.name, prop.name, prop.price), type="transaction")
             elif prop.owner and prop.owner != player:
                 rent_due = prop.rent(roll=(turn.dice_roll1 + turn.dice_roll2))
                 player.send_money(rent_due, prop.owner)
                 self.investment_tracker.rent_collected(prop.name, player.name, rent_due)
-                Logger.log("{} payed {} ${} for rent on {}".format(player, prop.owner, rent_due, prop))
+                Logger.log("{} payed {} ${} for rent on {}".format(player, prop.owner, rent_due, prop),
+                           type="transaction")
 
         TradeManager.run_best_trade(player)
         turn.recent_balance = player.balance
@@ -93,14 +94,17 @@ class MonopolyGame:
         if player.balance < 0:
             self.bankrupted_players.append(player)
             self.players.remove(player)
-            Logger.log("{} is now bankrupt (${}). Removing from the game.".format(player.name, player.balance))
+            Logger.log("{} is now bankrupt (${}). Removing from the game.".format(player.name, player.balance),
+                       type="bankrupted")
 
         player.turn_history.append(turn)
         self.log_all_player_updates()
 
     def log_all_player_updates(self):
+        to_log = ""
         for p in self.players:
-            Logger.log("\t {} has ${} and {}".format(p.name, p.balance, [str(prop) for prop in p.properties]))
+            to_log += "{} has ${} and {}\n".format(p.name, p.balance, [str(prop) for prop in p.properties])
+        Logger.log(to_log, type="player-update")
 
 
 class Player:
