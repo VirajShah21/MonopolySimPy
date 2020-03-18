@@ -3,6 +3,7 @@ from typing import List, IO
 printing_enabled: bool = True
 include_date: bool = True
 include_time: bool = True
+
 logs: List[str] = []
 
 
