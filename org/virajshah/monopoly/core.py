@@ -13,13 +13,16 @@ JAIL_INDEX = 1
 
 class MonopolyGame:
     # Fields: Tile[] board, Player[] players, Player[] bankrupted_players, int curr_player
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.board: List[Tile] = build_board()  # Tile[]
         self.players: List[Player] = []
         self.bankrupted_players: List[Player] = []
         self.curr_player: int = -1
         self.turn_number: int = 0
         self.investment_tracker: InvestmentTracker = InvestmentTracker()
+        if "players" in kwargs:
+            for player in kwargs["players"]:
+                self.players.append(Player(player, self))
 
     def add_player(self, player: "Player"):
         self.players.append(player)

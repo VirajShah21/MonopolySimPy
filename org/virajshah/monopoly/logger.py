@@ -1,4 +1,4 @@
-from typing import List, IO, Tuple
+from typing import List, IO
 
 from org.virajshah.monopoly.html import DOMElement
 
