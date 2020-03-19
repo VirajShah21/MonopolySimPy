@@ -8,7 +8,17 @@ class InvestmentTracker:
     def __init__(self):
         self.ledger: List[InvestmentRecord] = []
 
-    def track_property(self, prop_name: str, owner: str, turn: int, price: int):
+    def track_property(self, prop_name: str, owner: str, turn: int, price: int) -> None:
+        """
+        Add a new InvestmentRecord for a property to the ledger
+
+        :param prop_name: The name of the property
+        :param owner: The owner of the property
+        :param turn: The turn number (in the game)
+        :param price: The purchase price of the property
+        :return: None
+        """
+
         record: InvestmentRecord = InvestmentRecord()
         record.property = prop_name
         record.owner = owner
@@ -24,12 +34,28 @@ class InvestmentTracker:
         self.ledger.append(record)
 
     def find_active(self, prop_name: str) -> Union[InvestmentRecord, None]:
+        """
+        Find an active InvestmentRecord based on the property name
+        :param prop_name: The property name to query
+        :return: An InvestmentRecord containing the most up-to-date
+            information about a tracked property.
+            **RETURNS None if no property could be found**
+        """
         for record in self.ledger:
             if record.property == prop_name and record.status == "ACTIVE":
                 return record
         return None
 
-    def rent_collected(self, prop_name, payer, amount):
+    def rent_collected(self, prop_name, payer, amount) -> None:
+        """
+        Add a note to the record that a player has collected rent on a property
+
+        :param prop_name: The name of the property
+        :param payer: The individual paying rent
+        :param amount: The amount of rent due
+        :return: None
+        """
+
         record: InvestmentRecord = self.find_active(prop_name)
         if record is not None:
             transaction: TransactionRecord = TransactionRecord()
@@ -40,7 +66,13 @@ class InvestmentTracker:
         else:
             raise IndexError("No active record for '{}' could be found".format(prop_name))
 
-    def generate_html_table(self, filename: str):
+    def generate_html_table(self, filename: str) -> None:
+        """
+        Write all the transactions to an HTML table.
+
+        :param filename: The output destination for the HTML file
+        :return: None
+        """
         table = DOMElement("table", border="1")
         table.append_child(DOMElement("thead", children=[
             DOMElement("th", children=["Property"]),
@@ -80,6 +112,9 @@ class InvestmentTracker:
         fp.close()
 
     def __str__(self):
+        """
+        :return: Each record on a new line
+        """
         out: str = ""
         for record in self.ledger:
             out += str(record) + "\n"

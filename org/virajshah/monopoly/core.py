@@ -8,26 +8,45 @@ from random import randrange
 
 from org.virajshah.monopoly.tracker import InvestmentTracker
 
-JAIL_INDEX = 1
+JAIL_INDEX = 30
 
 
 class MonopolyGame:
-    # Fields: Tile[] board, Player[] players, Player[] bankrupted_players, int curr_player
     def __init__(self, **kwargs):
+        """
+        Initialize a MonopolyGame object
+
+        :param kwargs:
+            players=List[str]: names of players to initialize the game with
+        """
         self.board: List[Tile] = build_board()  # Tile[]
         self.players: List[Player] = []
         self.bankrupted_players: List[Player] = []
         self.curr_player: int = -1
         self.turn_number: int = 0
         self.investment_tracker: InvestmentTracker = InvestmentTracker()
+
+        # Check if argument players=List[str] was passed
+        # Then create players + add to game with provided names
         if "players" in kwargs:
             for player in kwargs["players"]:
                 self.players.append(Player(player, self))
 
-    def add_player(self, player: "Player"):
+    def add_player(self, player: "Player") -> None:
+        """
+        Add a player to the list of current active players
+
+        :param player: The player to add
+        :return: None
+        """
         self.players.append(player)
 
-    def run_next_turn(self):
+    def run_next_turn(self) -> None:
+        """
+        Run the turn of the next player
+
+        :return: None
+        """
         if len(self.players) == 0:
             Logger.log("There are no remaining players")
             return
@@ -103,7 +122,12 @@ class MonopolyGame:
         player.turn_history.append(turn)
         self.log_all_player_updates()
 
-    def log_all_player_updates(self):
+    def log_all_player_updates(self) -> None:
+        """
+        Log the status of each active player to org.virajshah.monopoly.Logger
+
+        :return: None
+        """
         to_log = ""
         for p in self.players:
             to_log += "{} has ${} and {}\n".format(p.name, p.balance, [str(prop) for prop in p.properties])
@@ -111,9 +135,13 @@ class MonopolyGame:
 
 
 class Player:
-    # Fields: str name, int balance, int position, TurnHistoryRecord turn_history, PropertyTile[] properties,
-    #         bool prisoner
     def __init__(self, name: str, game: MonopolyGame):
+        """
+        Initialize a monopoly player
+
+        :param name: The player's name
+        :param game: The game which the player is currently playing
+        """
         self.name: str = name
         self.balance: int = 1500
         self.position: int = 0
@@ -122,14 +150,30 @@ class Player:
         self.prisoner: bool = False
         self.game: MonopolyGame = game  # Game is assigned by MonopolyGame
 
-    def send_money(self, amount: int, other_player: "Player"):
+    def send_money(self, amount: int, other_player: "Player") -> None:
+        """
+        Send money from self to another player
+
+        :param amount: The amount of money to send
+        :param other_player: The player to receive the money
+        :return: None
+        """
         self.add_money(-amount)
         other_player.add_money(amount)
 
-    def add_money(self, amount: int):
+    def add_money(self, amount: int) -> None:
+        """
+        Add money to player's (self) balance
+
+        :param amount: The amount of money to add
+        :return: None
+        """
         self.balance += amount
 
     def __str__(self):
+        """
+        :return: The player's name
+        """
         return self.name
 
 
@@ -158,14 +202,26 @@ class TileAttribute(Enum):
 
     @staticmethod
     def is_set_attribute(attr: "TileAttribute") -> bool:
+        """
+        :param attr: TileAttribute to test
+        :return: True if the TileAttribute describes a set
+            (color group or utility/railroad type
+        """
         return attr in [TileAttribute.SET1, TileAttribute.SET2, TileAttribute.SET3, TileAttribute.SET4,
                         TileAttribute.SET5, TileAttribute.SET6, TileAttribute.SET7, TileAttribute.SET8,
                         TileAttribute.RAILROAD, TileAttribute.UTILITY]
 
 
 class Tile(ABC):
-    # Fields: str name, TileAttribute[] attributes
     def __init__(self, name: str, **kwargs):
+        """
+        The superclass of all Tiles
+
+        :param name: The name of the tile
+        :param kwargs:
+            attribute=TileAttribute: an attribute to add to the tile
+            attribute=List[TileAttribute]: a list of attributes to add
+        """
         self.name: str = name
         self.attributes: List[TileAttribute] = []
 
@@ -175,36 +231,64 @@ class Tile(ABC):
             self.attributes: List[TileAttribute] = kwargs["attributes"]
 
     def __str__(self):
+        """
+        :return: The tile's (self) name
+        """
         return self.name
 
 
 class BasicTile(Tile):
-    # Inherited Fields
-    #       Tile: str name, TileAttribute[] attributes
     def __init__(self, name: str, **kwargs):
+        """
+        Useless tiles are an instance of BasicTile
+
+        :param name: The name of the tile
+        :param kwargs:
+            attribute=TileAttribute: an attribute to add to the tile
+            attribute=List[TileAttribute]: a list of attributes to add
+        """
         super().__init__(name, **kwargs)
 
 
 class Property(Tile, ABC):
-    # Inherited Fields
-    #       Tile: str name, TileAttribute[] attributes
-    # Fields: int price, Player owner
     def __init__(self, name: str, price: int, **kwargs):
+        """
+        Initialize a Property tile (Colored properties, railroads, and utilities)
+
+        :param name: The name of the property
+        :param price: The cost to purchase the property
+        :param kwargs:
+            attribute=TileAttribute: an attribute to add to the tile
+            attribute=List[TileAttribute]: a list of attributes to add
+        """
         super().__init__(name, **kwargs)
         self.price: int = price
         self.owner: Union[Player, None] = None  # Player
         self.mortgaged: bool = False
 
     def get_set_attribute(self) -> Union[TileAttribute, None]:
+        """
+        Get the TileAttribute which describes `self` belongs in
+        :return: The TileAttribute describing the properties set.
+            Return value should be checked for None.
+        """
         for attr in self.attributes:
             if TileAttribute.is_set_attribute(attr):
                 return attr
         return None
 
     def is_monopoly_completed(self) -> bool:
+        """
+        :return: True if the monopoly set is complete for this property's set
+        """
         return self.set_completion() == 1
 
     def set_completion(self) -> float:
+        """
+        :return: A float representing how complete the current set is.
+            Calculated relative to properties owned by the owner
+            and the set which they belong to.
+        """
         count: int = 0
         set_attr: TileAttribute = self.get_set_attribute()
 
@@ -221,41 +305,85 @@ class Property(Tile, ABC):
         else:
             return count / 3
 
-    def purchase(self, purchaser: Player):
+    def purchase(self, purchaser: Player) -> None:
+        """
+        Make a player purchase this property. This assigns the owner
+        of this property to the new owner, deducts the balance from
+        the owner and adds the property to the owner's list of
+        properties.
+
+        :param purchaser: The player purchasing the property
+        :return: None
+        """
         self.owner = purchaser
         purchaser.add_money(-self.price)
         purchaser.properties.append(self)
 
-    def mortgage(self):
+    def mortgage(self) -> None:
+        """
+        Mortgages a property and reimburses the player.
+
+        :return: None
+        """
         self.mortgaged = True
         self.owner.add_money(int(0.5 * self.price))
 
-    def unmortgage(self):
+    def unmortgage(self) -> None:
+        """
+        Unmortgage a property and charge the player.
+
+        :return: None
+        """
         self.mortgaged = False
         self.owner.add_money(int(-1.1 * 0.5 * self.price))  # Unmortgage = 110% of mortgage price
 
-    def transfer_ownership(self, new_owner: Player):
+    def transfer_ownership(self, new_owner: Player) -> None:
+        """
+        Transfer the ownership of this property from the current
+        owner to a new owner. Also transfers the property from
+        their respective property lists.
+
+        :param new_owner: The new owner of the property
+        :return: None
+        """
         self.owner.properties.remove(self)
         self.owner = new_owner
         new_owner.properties.append(self)
 
     @abstractmethod
-    def rent(self, **kwargs):
+    def rent(self, **kwargs) -> int:
+        """
+        Should return the rent value for the appropriate type
+        of property.
+
+        :param kwargs: Defined by subclasses
+        :return: The amount due on the property's rent
+        """
         pass
 
 
 class ColoredProperty(Property):
-    # Inherited Fields
-    #       Tile: str name, TileAttribute[] attributes
-    #       Property: int price, Player owner
-    # Fields: int[] rents, int houses
     def __init__(self, name: str, price: int, rent_list: List[int], set_attribute: TileAttribute):
+        """
+        Initialize a colored property. These are properties
+        with an assigned color. Does not include railroads
+        and utility's.
+
+        :param name: The name of the property
+        :param price: The cost to purchase the property from the bank
+        :param rent_list: The list of rent values per house (rent_list[5] = w/ hotel)
+        :param set_attribute: The set which this property belongs to
+        """
         super().__init__(name, price,
                          attributes=[TileAttribute.PROPERTY, set_attribute, TileAttribute.COLORED_PROPERTY])
         self.rents: List[int] = rent_list
         self.houses: int = 0
 
     def house_cost(self) -> int:
+        """
+        :return: The cost to build a single house on this property
+        """
+
         set_attr: TileAttribute = self.get_set_attribute()  # TileAttribute
         if set_attr == TileAttribute.SET1 or set_attr == TileAttribute.SET2:
             return 50
@@ -267,9 +395,17 @@ class ColoredProperty(Property):
             return 200
 
     def rent(self, **kwargs) -> int:
+        """
+        :param kwargs: Empty parameter list
+        :return: The amount of rent due on the property
+        """
         return self.rents[self.houses]
 
     def __str__(self):
+        """
+        :return: The name of the property and the number of houses/hotel.
+        """
+
         end_tag: Union[str, None] = None
         if self.is_monopoly_completed():
             if self.houses == 0:
@@ -282,13 +418,25 @@ class ColoredProperty(Property):
 
 
 class NonColoredProperty(Property):
-    # Inherited Fields
-    #       Tile: str name, TileAttribute[] attributes
-    # Fields: int price, Player owner
     def __init__(self, name: str, prop_type: TileAttribute):
+        """
+        Initialize a property which is not a colored property.
+        This only includes railroads and utilities.
+
+        :param name: The name of the type
+        :param prop_type: Either TileAttribute.{RAILROAD or UTILITY}
+        """
         super().__init__(name, 200 if prop_type == TileAttribute.RAILROAD else 150)
 
     def rent(self, **kwargs) -> int:
+        """
+        Get the amount of rent owned the property
+
+        :param kwargs:
+            roll=int: The sum of both dice rolls
+        :return: The amount of money due on rent on this property
+        """
+
         if TileAttribute.RAILROAD in self.attributes:
             count: int = 0
             for prop in self.owner.properties:
@@ -303,6 +451,10 @@ class NonColoredProperty(Property):
             return kwargs["roll"] * (10 if count == 2 else 4)
 
     def __str__(self):
+        """
+        :return: The property name and how many of the set are owned
+        """
+
         end_tag: Union[str, None] = None
         if self.is_monopoly_completed():
             end_tag = "(Monopoly)"
@@ -315,13 +467,22 @@ class NonColoredProperty(Property):
 
 
 class MortgageManager:
-    # Fields: Player client, TradeBroker broker
-
     def __init__(self, client: Player):
+        """
+        :param client: The player to manage
+        """
         self.client: Player = client
         self.broker: TradeBroker = TradeBroker(client)
 
     def force_mortgage(self, threshold: int) -> int:
+        """
+        Force a mortgage until a specified amount of money
+        has been collected.
+
+        :param threshold: The amount of money required from
+            the mortgages
+        :return: The amount money obtained from the mortgages
+        """
         liquidated: int = 0
 
         liquidated += self.liquidate(self.class_f_properties(), threshold)
@@ -339,6 +500,13 @@ class MortgageManager:
 
     @staticmethod
     def liquidate(to_liquidate: List[Property], threshold: int) -> int:
+        """
+        Liquidate a list of properties up to a specified threshold.
+
+        :param to_liquidate: The list of properties to mortgage
+        :param threshold: The specified threshold to quit liquidation
+        :return: The value of liquidated properties
+        """
         liquidated: int = 0
         for prop in to_liquidate:
             if not prop.mortgaged:
@@ -349,14 +517,10 @@ class MortgageManager:
                 return liquidated
         return liquidated
 
-    # Class A Properties - Colored properties in a monopoly set with a hotel on all properties in the set
-    # Class B Properties - Colored properties with at least one hotel on the set
-    # Class C Properties - Colored properties with at least one house on each property
-    # Class D Properties - Properties as part of a completed monopoly set
-    # Class E Properties - 50% or more completed sets
-    # Class F Properties - Any other property
-
     def class_a_properties(self) -> List[Property]:
+        """
+        :return: Colored properties in a monopoly set with a hotel on all properties in the set
+        """
         out: List[Property] = []
         for prop in self.client.properties:
             if isinstance(prop, ColoredProperty) and prop.is_monopoly_completed():
@@ -371,6 +535,9 @@ class MortgageManager:
         return out
 
     def class_b_properties(self) -> List[Property]:
+        """
+        :return: Colored properties with at least one hotel on the set
+        """
         out: List[Property] = []
         conflicts: List[Property] = self.class_a_properties()
 
@@ -384,6 +551,9 @@ class MortgageManager:
         return out
 
     def class_c_properties(self) -> List[Property]:
+        """
+        :return: Colored properties with at least one house on each property
+        """
         out: List[Property] = []
         conflicts: List[Property] = self.class_a_properties() + self.class_b_properties()
 
@@ -399,10 +569,16 @@ class MortgageManager:
         return out
 
     def class_d_properties(self) -> List[Property]:
+        """
+        :return:  Properties as part of a completed monopoly set
+        """
         conflicts: List[Property] = self.class_a_properties() + self.class_b_properties() + self.class_c_properties()
         return [prop for prop in self.client.properties if prop not in conflicts and prop.is_monopoly_completed()]
 
     def class_e_properties(self) -> List[Property]:
+        """
+        :return: 50% or more completed sets
+        """
         conflicts: List[Property] = self.class_a_properties() + self.class_b_properties()
         conflicts += self.class_c_properties() + self.class_d_properties()
 
@@ -410,16 +586,26 @@ class MortgageManager:
                 prop not in conflicts and self.broker.attribute_completion(prop.get_set_attribute()) >= 0.5]
 
     def class_f_properties(self) -> List[Property]:
+        """
+        :return: All inferior properties
+        """
         conflicts: List[Property] = self.class_a_properties() + self.class_b_properties() + self.class_c_properties()
         conflicts += self.class_d_properties() + self.class_e_properties()
         return [prop for prop in self.client.properties if prop not in conflicts]
 
 
 class TradeBroker:
-    # Fields: Player client
-
     @staticmethod
     def count_properties_with_attribute(player: Player, attr: TileAttribute) -> int:
+        """
+        Count the number of properties with a specified attribute are
+        owned by the client.
+
+        :param player: The player acting as the static client
+        :param attr: The TileAttribute to calculate
+        :return: The number of properties with the same attribute
+            which have the same owner
+        """
         count: int = 0
         for prop in player.properties:
             if attr in prop.attributes:
@@ -427,9 +613,18 @@ class TradeBroker:
         return count
 
     def __init__(self, client: Player):
+        """
+        :param client: The broker's client
+        """
         self.client: Player = client
 
     def assign_property_values(self) -> Dict[str, int]:
+        """
+        Assign implicit value to the properties owned by the client
+
+        :return: A dictionary mapping the property's name to it's value
+        """
+
         values: Dict[str, int] = {}
 
         for prop in self.client.properties:
@@ -450,6 +645,13 @@ class TradeBroker:
         return values
 
     def attribute_completion(self, attr: TileAttribute) -> float:
+        """
+        Calculate the attribute completion for a TileAttribute
+
+        :param attr: The attribute to calculate completion
+        :return: The attributes set completion
+        """
+
         count: int = 0
         total: int = 0
 
@@ -464,12 +666,26 @@ class TradeBroker:
         return float(count) / total if total != 0 else 0
 
     def attribute_completions(self) -> Dict[TileAttribute, float]:
+        """
+        Calculate the attribute completion for all properties belong
+        to the client.
+
+        :return: A dictionary mapping the TileAttribute to a float
+            representing the attribute completion
+        """
         out: Dict[TileAttribute, float] = {}
         for prop in self.client.properties:
-            out[prop.get_set_attribute()] = self.attribute_completion(prop.get_set_attribute())
+            if prop.get_set_attribute() not in out:
+                out[prop.get_set_attribute()] = self.attribute_completion(prop.get_set_attribute())
         return out
 
     def houses_on_set(self, set_attr: TileAttribute) -> int:
+        """
+        Compute the number of houses on the set (not just a property)
+
+        :param set_attr: The TileAttribute describing a colored property set
+        :return: The number of houses on the specified set
+        """
         count: int = 0
         for prop in self.client.properties:
             if isinstance(prop, ColoredProperty) and set_attr in prop.attributes:
@@ -477,6 +693,10 @@ class TradeBroker:
         return count
 
     def most_wanted_set(self) -> TileAttribute:
+        """
+        :return: The TileAttribute of the most wanted set
+        """
+
         completions: Dict[TileAttribute, float] = self.attribute_completions()
         largest: Union[TileAttribute, None] = None
 
@@ -488,6 +708,10 @@ class TradeBroker:
         return largest
 
     def best_trader_match(self) -> Player:
+        """
+        :return: The player that offers the best trade for the client
+        """
+
         players: List[Player] = self.client.game.players
         best: Player = players[0]
         most_wanted_set: TileAttribute = self.most_wanted_set()
@@ -501,17 +725,26 @@ class TradeBroker:
 
 
 class TradeDeal:
-    # Fields: Player player1, Player player2, Property[] player1acquisitions, Property[] player2acquisitions
-    #         int compensation
-
     def __init__(self, p1: Player, p2: Player):
+        """
+        A container for trade data.
+        Includes one method (execute) to execute the trade.
+
+        :param p1: Player 1 (client of the broker creating the TradeDeal)
+        :param p2: Player 2
+        """
         self.player1: Player = p1
         self.player2: Player = p2
         self.player1acquisitions: List[Property] = []
         self.player2acquisitions: List[Property] = []
         self.compensation: int = 0
 
-    def execute(self):
+    def execute(self) -> None:
+        """
+        FORCES the execution of a trade
+        :return: None
+        """
+
         if self.compensation > 0:
             Logger.log("{} payed {} ${}".format(self.player1, self.player2, self.compensation))
         elif self.compensation < 0:
@@ -537,7 +770,15 @@ class TradeDeal:
 
 class TradeManager:
     @staticmethod
-    def run_best_trade(client: Player):
+    def run_best_trade(client: Player) -> None:
+        """
+        Run the best trade for the client. Only runs if at least
+        14 properties have been bought.
+
+        :param client: The player to run the trade for
+        :return: None
+        """
+
         # Make sure at least 14 properties have been bought
         unowned_properties: List[Property] = [curr_tile for curr_tile in client.game.board if
                                               isinstance(curr_tile, Property) and not curr_tile.owner]
@@ -571,7 +812,11 @@ class TradeManager:
         deal.execute()
 
 
-def build_board():
+def build_board() -> List[Tile]:
+    """
+    :return: A list of Tile objects which represent a
+        Monopoly Game board
+    """
     chance_label: str = "Chance"
     chest_label: str = "Community Chest"
     return [BasicTile("Go", attribute=TileAttribute.GO),

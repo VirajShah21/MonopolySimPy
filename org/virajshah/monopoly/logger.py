@@ -11,19 +11,28 @@ logs: List["Log"] = []
 
 class Log:
     def __init__(self, message: str, **kwargs):
+        """
+        Initialize a log wrapper.
+
+        :param message: The message to be logged
+        :param kwargs:
+            type=str: Options: (default), transaction, player-update, bankrupted
+        """
         self.message: str = message
         self.type: str = kwargs["type"] if "type" in kwargs else "default"
 
-    def css(self):
+    def css(self) -> str:
+        """
+        Get the css of the log
+
+        :return: The CSS for if the log is injected in HTML
+        """
+
         fg: str = ""
         bg: str = "linear-gradient(to right, {}, {})"
         shadow: str = "0 0 50px 1px {}"
 
-        if self.type == "default":
-            fg = "white"
-            bg = bg.format("black", "rgb(50, 50, 50)")
-            shadow = shadow.format("black")
-        elif self.type == "transaction":
+        if self.type == "transaction":
             fg = "black"
             bg = bg.format("#0ba360", "#3cba92")
             shadow = shadow.format("#0ba360")
@@ -35,22 +44,44 @@ class Log:
             fg = "black"
             bg = bg.format("#eea2a2 0%, #bbc1bf 19%, #57c6e1 42%", "#b49fda 79%, #7ac5d8 100%")
             shadow = shadow.format("lightblue")
+        else:  # default
+            fg = "white"
+            bg = bg.format("black", "rgb(50, 50, 50)")
+            shadow = shadow.format("black")
 
         return 'color:{};background:{};box-shadow:{}'.format(fg, bg, shadow)
 
     def __str__(self):
+        """
+        :return: The logged message
+        """
         return self.message
 
 
 class Logger:
     @staticmethod
-    def log(message: str, **kwargs):
+    def log(message: str, **kwargs) -> None:
+        """
+        Log a message to the list of logs
+
+        :param message: The message to append
+        :param kwargs:
+            type=...: The type of log being appended
+        :return: None
+        """
         if printing_enabled:
             print(message)
         logs.append(Log(message, **kwargs))
 
     @staticmethod
-    def save(filename: str):
+    def save(filename: str) -> None:
+        """
+        Save the logs to a file.
+
+        :param filename: The file to save the logs to
+            Note: *.html will generate an html doc for the logs
+        :return: None
+        """
         ext: str = filename.split(".")[-1] if "." in filename else "txt"
         buffer: IO = open(filename, "w")
         if ext in ["txt", "log"]:
