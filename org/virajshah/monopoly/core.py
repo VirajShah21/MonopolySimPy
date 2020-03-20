@@ -5,6 +5,7 @@ from typing import List, Union, Dict, cast
 from org.virajshah.monopoly.logger import Logger
 from org.virajshah.monopoly.records import TurnHistoryRecord
 from random import randrange
+import random
 
 from org.virajshah.monopoly.tracker import InvestmentTracker
 
@@ -47,6 +48,7 @@ class MonopolyGame:
 
         :return: None
         """
+
         if len(self.players) == 0:
             Logger.log("There are no remaining players")
             return
@@ -111,6 +113,27 @@ class MonopolyGame:
                            type="transaction")
 
         TradeManager.run_best_trade(player)
+
+        if player.configuration.mortgage_to_build:
+            mortgager: MortgageManager = MortgageManager(player)
+            to_build = mortgager.class_b_properties() + mortgager.class_c_properties() + mortgager.class_d_properties()
+            to_mortgage = mortgager.class_e_properties() + mortgager.class_f_properties()
+
+            if player.configuration.quick_builder:  # Mortgage all + build on all properties
+                mortgager.liquidate_all(to_mortgage)
+
+                for prop in to_build:
+                    assert isinstance(prop, ColoredProperty)
+                    houses_cost: int = prop.house_cost() * (5 - prop.houses)
+                    insurance: int = player.configuration.insurance_amount(player.game)
+                    if prop.houses < 5 and player.balance - houses_cost > insurance:
+                        prop.houses = 5
+                        player.add_money(-houses_cost)
+
+        for prop in player.properties:
+            if isinstance(prop, ColoredProperty):
+                prop.distribute_houses()
+
         turn.recent_balance = player.balance
 
         if player.balance < 0:
@@ -149,6 +172,7 @@ class Player:
         self.properties: List[Property] = []
         self.prisoner: bool = False
         self.game: MonopolyGame = game  # Game is assigned by MonopolyGame
+        self.configuration: PlayerConfiguration = PlayerConfiguration()
 
     def send_money(self, amount: int, other_player: "Player") -> None:
         """
@@ -175,6 +199,29 @@ class Player:
         :return: The player's name
         """
         return self.name
+
+
+class PlayerConfiguration:
+    def __init__(self):
+        """
+        Generate a random player configuration
+        """
+        self.mortgage_to_build: bool = True if randrange(0, 2) else False
+        self.quick_builder: bool = True if randrange(0, 2) else False
+        self.insurance_rate: float = random.random() / 4
+
+    def insurance_amount(self, game: MonopolyGame) -> int:
+        """
+        Get the amount of money which the user would like
+        to use as insurance
+
+        :param game: The wrapping game
+        :return: The amount of insurance money
+        """
+        circulation: int = 0
+        for player in game.players:
+            circulation += player.balance
+        return int(self.insurance_rate * circulation)
 
 
 class TileAttribute(Enum):
@@ -394,6 +441,29 @@ class ColoredProperty(Property):
         elif set_attr == TileAttribute.SET7 or set_attr == TileAttribute.SET8:
             return 200
 
+    def distribute_houses(self):
+        set_attr: TileAttribute = self.get_set_attribute()
+
+        min_houses: int = 5  # These values are reversed
+        max_houses: int = 0  # Think about why it makes sense
+        min_prop: Union[Property, None] = None
+        max_prop: Union[Property, None] = None
+
+        for prop in self.owner.properties:
+            assert isinstance(prop, ColoredProperty)
+            if prop.get_set_attribute() == set_attr:
+                if prop.houses < min_houses:
+                    min_houses = prop.houses
+                    min_prop = prop
+                if prop.houses > max_houses:
+                    max_houses = prop.houses
+                    max_prop = prop
+
+        if max_houses - min_houses > 1:
+            min_prop.houses += 1
+            max_prop.houses -= 1
+            self.distribute_houses()
+
     def rent(self, **kwargs) -> int:
         """
         :param kwargs: Empty parameter list
@@ -510,11 +580,26 @@ class MortgageManager:
         liquidated: int = 0
         for prop in to_liquidate:
             if not prop.mortgaged:
-                prop.mortgaged = True
+                prop.mortgage()
                 liquidated += prop.price / 2
 
             if liquidated >= threshold:
                 return liquidated
+        return liquidated
+
+    @staticmethod
+    def liquidate_all(to_liquidate: List[Property]):
+        """
+        Forcefully liquidate a list of properties
+
+        :param to_liquidate: The list of properties to mortgage
+        :return: Amount of money received from the mortgages
+        """
+        liquidated: int = 0
+        for prop in to_liquidate:
+            if not prop.mortgaged:
+                prop.mortgage()
+                liquidated += prop.price / 2
         return liquidated
 
     def class_a_properties(self) -> List[Property]:
