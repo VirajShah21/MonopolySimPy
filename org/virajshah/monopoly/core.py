@@ -100,35 +100,49 @@ class MonopolyGame:
         if TileAttribute.PROPERTY in self.board[player.position].attributes:
             prop: Property = cast(Property, self.board[player.position])
 
-            if not prop.owner and player.balance > prop.price:
+            if prop.owner is None and player.balance - prop.price >= player.configuration.insurance_amount(self):
                 prop.purchase(player)
                 turn.new_properties.append(prop.name)
                 self.investment_tracker.track_property(prop.name, prop.owner.name, self.turn_number, prop.price)
                 Logger.log("{} purchased {} for ${}".format(player.name, prop.name, prop.price), type="transaction")
-            elif prop.owner and prop.owner != player:
+            elif prop.owner is not None and prop.owner != player:
                 rent_due = prop.rent(roll=(turn.dice_roll1 + turn.dice_roll2))
                 player.send_money(rent_due, prop.owner)
                 self.investment_tracker.rent_collected(prop.name, player.name, rent_due)
                 Logger.log("{} payed {} ${} for rent on {}".format(player, prop.owner, rent_due, prop),
                            type="transaction")
 
-        TradeManager.run_best_trade(player)
+        TradeBroker(player).run_best_trade()
+
+        mortgager: MortgageManager = MortgageManager(player)
+        to_build: List[Property]
+        class_b: List[Property] = mortgager.class_b_properties()
+        class_c: List[Property] = mortgager.class_c_properties()
+        class_d: List[Property] = mortgager.class_d_properties()
+        class_e: List[Property] = mortgager.class_e_properties()
+        class_f: List[Property] = mortgager.class_f_properties()
 
         if player.configuration.mortgage_to_build:
-            mortgager: MortgageManager = MortgageManager(player)
-            to_build = mortgager.class_b_properties() + mortgager.class_c_properties() + mortgager.class_d_properties()
-            to_mortgage = mortgager.class_e_properties() + mortgager.class_f_properties()
-
             if player.configuration.quick_builder:  # Mortgage all + build on all properties
-                mortgager.liquidate_all(to_mortgage)
-
-                for prop in to_build:
-                    assert isinstance(prop, ColoredProperty)
-                    houses_cost: int = prop.house_cost() * (5 - prop.houses)
-                    insurance: int = player.configuration.insurance_amount(player.game)
-                    if prop.houses < 5 and player.balance - houses_cost > insurance:
-                        prop.houses = 5
-                        player.add_money(-houses_cost)
+                to_build = class_b + class_c + class_d
+                mortgager.liquidate_all(class_e + class_f)
+            else:
+                to_build: List[Property] = class_b if len(class_b) != 0 else class_c
+                to_build = to_build if len(to_build) != 0 else class_d
+                mortgager.liquidate_all(class_f if len(class_f) != 0 else class_e)
+        else:
+            if player.configuration.quick_builder:
+                to_build: List[Property] = class_b + class_c + class_d
+            else:
+                to_build: List[Property] = class_b if len(class_b) != 0 else class_c
+                to_build = to_build if len(to_build) != 0 else class_d
+        for prop in to_build:
+            assert isinstance(prop, ColoredProperty)
+            house_cost: int = prop.house_cost()
+            insurance: int = player.configuration.insurance_amount(player.game)
+            while prop.houses < 5 and player.balance - house_cost > insurance:
+                prop.houses += 1
+                player.add_money(-house_cost)
 
         for prop in player.properties:
             if isinstance(prop, ColoredProperty):
@@ -137,6 +151,13 @@ class MonopolyGame:
         turn.recent_balance = player.balance
 
         if player.balance < 0:
+            mortgager.force_mortgage(-player.balance)
+
+        if player.balance < 0:
+            for prop in player.properties:
+                prop.mortgaged = False
+                prop.owner = None
+            player.properties.clear()
             self.bankrupted_players.append(player)
             self.players.remove(player)
             Logger.log("{} is now bankrupt (${}). Removing from the game.".format(player.name, player.balance),
@@ -441,7 +462,13 @@ class ColoredProperty(Property):
         elif set_attr == TileAttribute.SET7 or set_attr == TileAttribute.SET8:
             return 200
 
-    def distribute_houses(self):
+    def distribute_houses(self) -> None:
+        """
+        Distribute the number of houses on this set amongst all properties
+        on the same set
+
+        :return: None
+        """
         set_attr: TileAttribute = self.get_set_attribute()
 
         min_houses: int = 5  # These values are reversed
@@ -569,6 +596,21 @@ class MortgageManager:
         return liquidated
 
     @staticmethod
+    def sell_houses(prop: Property) -> int:
+        """
+        Sell all houses on the specified property
+
+        :param prop: The property to sell houses on
+        :return: The number of sold houses
+        """
+        if isinstance(prop, ColoredProperty) and prop.houses > 0:
+            prop.owner.add_money(int(0.5 * prop.houses * prop.house_cost()))
+            sold: int = prop.houses
+            prop.houses = 0
+            return sold
+        return 0
+
+    @staticmethod
     def liquidate(to_liquidate: List[Property], threshold: int) -> int:
         """
         Liquidate a list of properties up to a specified threshold.
@@ -580,6 +622,7 @@ class MortgageManager:
         liquidated: int = 0
         for prop in to_liquidate:
             if not prop.mortgaged:
+                MortgageManager.sell_houses(prop)
                 prop.mortgage()
                 liquidated += prop.price / 2
 
@@ -598,6 +641,7 @@ class MortgageManager:
         liquidated: int = 0
         for prop in to_liquidate:
             if not prop.mortgaged:
+                MortgageManager.sell_houses(prop)
                 prop.mortgage()
                 liquidated += prop.price / 2
         return liquidated
@@ -798,15 +842,59 @@ class TradeBroker:
         """
 
         players: List[Player] = self.client.game.players
-        best: Player = players[0]
+        best: Player = players[0] if players[0] != self.client else players[1]
         most_wanted_set: TileAttribute = self.most_wanted_set()
 
         for player in players:
-            if self.count_properties_with_attribute(player, most_wanted_set) > self.count_properties_with_attribute(
-                    best,
-                    most_wanted_set):
+            match_props_with_attr: int = self.count_properties_with_attribute(best, most_wanted_set)
+            self_props_with_attr: int = self.count_properties_with_attribute(player, most_wanted_set)
+            if player != self.client and self_props_with_attr > match_props_with_attr:
                 best = player
         return best
+
+    def run_best_trade(self) -> bool:
+        """
+        Run the best trade for the client. Only runs if at least
+        14 properties have been bought.
+
+        :return: True if the trade was successful, False otherwise
+        """
+        client: Player = self.client
+        # Make sure at least 14 properties have been bought
+        unowned_properties: List[Property] = [curr_tile for curr_tile in client.game.board if
+                                              isinstance(curr_tile, Property) and not curr_tile.owner]
+        if len(unowned_properties) < 14:
+            return False
+        del unowned_properties
+
+        broker: TradeBroker = TradeBroker(client)
+        other_player: Player = broker.best_trader_match()
+        other_broker: TradeBroker = TradeBroker(client)
+        deal: TradeDeal = TradeDeal(client, other_player)
+        receiving: TileAttribute = broker.most_wanted_set()
+        giving: TileAttribute = other_broker.most_wanted_set()
+
+        if receiving is not None and giving is not None and receiving != giving:
+            deal.player1acquisitions = [prop for prop in other_player.properties if receiving in prop.attributes]
+            deal.player2acquisitions = [prop for prop in client.properties if giving in prop.attributes]
+
+            player1value: int = 0
+            player2value: int = 0
+
+            values: Dict[str, int] = broker.assign_property_values()
+            for prop in deal.player2acquisitions:
+                player1value += values[prop.name] if prop.name in values else 0
+
+            values: Dict[str, int] = other_broker.assign_property_values()
+            for prop in deal.player1acquisitions:
+                player2value += values[prop.name] if prop.name in values else 0
+
+            deal.compensation = player2value - player1value
+
+            Logger.log("Trade Deal\n==========\n" + str(deal))
+            deal.execute()
+            return True
+        return False
 
 
 class TradeDeal:
@@ -852,49 +940,16 @@ class TradeDeal:
         self.player1.add_money(-self.compensation)
         self.player2.add_money(self.compensation)
 
-
-class TradeManager:
-    @staticmethod
-    def run_best_trade(client: Player) -> None:
+    def __str__(self):
         """
-        Run the best trade for the client. Only runs if at least
-        14 properties have been bought.
-
-        :param client: The player to run the trade for
-        :return: None
+        :return: The transactions involved in the deal
         """
-
-        # Make sure at least 14 properties have been bought
-        unowned_properties: List[Property] = [curr_tile for curr_tile in client.game.board if
-                                              isinstance(curr_tile, Property) and not curr_tile.owner]
-        if len(unowned_properties) < 14:
-            return
-        del unowned_properties
-
-        broker: TradeBroker = TradeBroker(client)
-        other_player: Player = broker.best_trader_match()
-        other_broker: TradeBroker = TradeBroker(client)
-        deal: TradeDeal = TradeDeal(client, other_player)
-        receiving: TileAttribute = broker.most_wanted_set()
-        giving: TileAttribute = other_broker.most_wanted_set()
-
-        deal.player1acquisitions = [prop for prop in other_player.properties if receiving in prop.attributes]
-        deal.player2acquisitions = [prop for prop in client.properties if giving in prop.attributes]
-
-        player1value: int = 0
-        player2value: int = 0
-
-        values: Dict[str, int] = broker.assign_property_values()
-        for prop in deal.player2acquisitions:
-            player1value += values[prop.name] if prop.name in values else 0
-
-        values: Dict[str, int] = other_broker.assign_property_values()
-        for prop in deal.player1acquisitions:
-            player2value += values[prop.name] if prop.name in values else 0
-
-        deal.compensation = player2value - player1value
-
-        deal.execute()
+        return "{0} acquires {1}\n{2} acquires {3}\nNet transfer: {0} --[ ${4} ]--> {2}" \
+            .format(self.player1.name,
+                    self.player1acquisitions,
+                    self.player2.name,
+                    self.player2acquisitions,
+                    self.compensation)
 
 
 def build_board() -> List[Tile]:
