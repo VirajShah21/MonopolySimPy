@@ -82,6 +82,7 @@ class Logger:
             Note: *.html will generate an html doc for the logs
         :return: None
         """
+        print("Saving {} logs".format(len(logs)))
         ext: str = filename.split(".")[-1] if "." in filename else "txt"
         buffer: IO = open(filename, "w")
         if ext in ["txt", "log"]:
@@ -94,7 +95,7 @@ class Logger:
             log_num = 1
             for log in logs:
                 logs_html_list.append(
-                    DOMElement("div", children=[
+                    DOMElement("div", id="log-{}".format(log_num), children=[
                         str(log_num),
                         DOMElement("div", classname="log", style=log.css(), children=[log.message])]))
                 log_num += 1
@@ -103,7 +104,16 @@ class Logger:
                 DOMElement("head", children=[
                     DOMElement("meta", charset="utf-8"),
                     DOMElement("title", children=["MonopolySimPy Log"]),
-                    DOMElement("style", type="text/css", children=["""
+                    DOMElement("style", type="text/css", children=["""                   
+                    pre {
+                        overflow-x: auto;
+                        white-space: pre-wrap;
+                        white-space: -moz-pre-wrap;
+                        white-space: -pre-wrap;
+                        white-space: -o-pre-wrap;
+                        word-wrap: break-word;
+                    }
+                    
                     .loglist {
                         padding-left: 10vw;
                         padding-right: 10vw;
@@ -117,18 +127,34 @@ class Logger:
                         margin-bottom: 50px;
                     }
                     
-                    pre {
-                        overflow-x: auto;
-                        white-space: pre-wrap;
-                        white-space: -moz-pre-wrap;
-                        white-space: -pre-wrap;
-                        white-space: -o-pre-wrap;
-                        word-wrap: break-word;
+                    #menubar {
+                        width: 100%;
+                        position: fixed;
+                        top: 0;
+                        box-sizing: border-box;
+                        padding: 1em;
+                        background-color: rgba(255, 255, 255, 0.5);
+                        -webkit-backdrop-filter: blur(20px);
+                        backdrop-filter: blur(20px);                        
+                    }
+                    
+                    #menubar a {
+                        color: gray;
+                        text-decoration: none;
+                        padding: 1em;
+                        box-sizing: border-box;
+                        font-family: "Avenir Next", "Helvetica Neue", "Arial"
                     }
                 """])
                 ]),
                 DOMElement("body", children=[
-                    DOMElement("pre", classname="loglist", children=logs_html_list)
+                    DOMElement("div", id="menubar", children=[
+                        DOMElement("a", children=["#"],
+                                   onclick="javascript:window.location = '#log-' + prompt('Jump to log #:');"),
+                        DOMElement("a", children=["Top"], href="#log-1"),
+                        DOMElement("a", children=["Bottom"], href="#log-{}".format(len(logs)))
+                    ]),
+                    DOMElement("pre", classname="loglist", children=logs_html_list),
                 ])
             ])
             buffer.write(str(page))
