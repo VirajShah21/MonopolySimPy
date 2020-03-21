@@ -28,7 +28,7 @@ class Log:
         :return: The CSS for if the log is injected in HTML
         """
 
-        fg: str = ""
+        fg: str
         bg: str = "linear-gradient(to right, {}, {})"
         shadow: str = "0 0 50px 1px {}"
 
@@ -89,46 +89,48 @@ class Logger:
             for log in logs:
                 text += str(log) + "\n"
             buffer.write(text)
-            buffer.close()
         elif ext in ["html", "htm"]:
             logs_html_list: List[DOMElement] = []
-
+            log_num = 1
             for log in logs:
-                logs_html_list.append(DOMElement("div", classname="log", style=log.css(), children=[log.message]))
+                logs_html_list.append(
+                    DOMElement("div", children=[
+                        str(log_num),
+                        DOMElement("div", classname="log", style=log.css(), children=[log.message])]))
+                log_num += 1
 
             page: DOMElement = DOMElement("html", lang="en-US", children=[
                 DOMElement("head", children=[
                     DOMElement("meta", charset="utf-8"),
                     DOMElement("title", children=["MonopolySimPy Log"]),
                     DOMElement("style", type="text/css", children=["""
-                        .loglist {
-                            padding-left: 10vw;
-                            padding-right: 10vw;
-                            padding-top: 10vh;
-                            padding-bottom: 10vh;
-                        }
-                        
-                        .log {
-                            padding: 25px;
-                            font-family: menlo, monospace;
-                            margin-bottom: 50px;
-                        }
-                        
-                        pre {
-                            overflow-x: auto;
-                            white-space: pre-wrap;
-                            white-space: -moz-pre-wrap;
-                            white-space: -pre-wrap;
-                            white-space: -o-pre-wrap;
-                            word-wrap: break-word;
-                        }
-                    """])
+                    .loglist {
+                        padding-left: 10vw;
+                        padding-right: 10vw;
+                        padding-top: 10vh;
+                        padding-bottom: 10vh;
+                    }
+                    
+                    .log {
+                        padding: 25px;
+                        font-family: menlo, monospace;
+                        margin-bottom: 50px;
+                    }
+                    
+                    pre {
+                        overflow-x: auto;
+                        white-space: pre-wrap;
+                        white-space: -moz-pre-wrap;
+                        white-space: -pre-wrap;
+                        white-space: -o-pre-wrap;
+                        word-wrap: break-word;
+                    }
+                """])
                 ]),
                 DOMElement("body", children=[
                     DOMElement("pre", classname="loglist", children=logs_html_list)
                 ])
             ])
-
             buffer.write(str(page))
-            buffer.close()
-            print("Logs saved to {}".format(filename))
+        buffer.close()
+        print("Logs saved to {}".format(filename))
