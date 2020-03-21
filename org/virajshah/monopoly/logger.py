@@ -1,6 +1,7 @@
 from typing import List, IO
 
 from org.virajshah.monopoly.html import DOMElement
+import os
 
 printing_enabled: bool = False
 include_date: bool = True
@@ -38,8 +39,8 @@ class Log:
             shadow = shadow.format("#0ba360")
         elif self.type == "player-update":
             fg = "black"
-            bg = bg.format("#fa709a", "#fee140")
-            shadow = shadow.format("orangered")
+            bg = bg.format("#667eea", "#764ba2")
+            shadow = shadow.format("#6f30af")
         elif self.type == "bankrupted":
             fg = "black"
             bg = bg.format("#eea2a2 0%, #bbc1bf 19%, #57c6e1 42%", "#b49fda 79%, #7ac5d8 100%")
@@ -91,13 +92,19 @@ class Logger:
                 text += str(log) + "\n"
             buffer.write(text)
         elif ext in ["html", "htm"]:
+            game_board_fp: IO = open(os.path.dirname(os.path.realpath(__file__)) + "/html_components/game-board.html",
+                                     "r")
+            game_board_html: str = game_board_fp.read()
+            game_board_fp.close()
+            del game_board_fp
+
             logs_html_list: List[DOMElement] = []
             log_num = 1
             for log in logs:
                 logs_html_list.append(
                     DOMElement("div", id="log-{}".format(log_num), children=[
-                        str(log_num),
-                        DOMElement("div", classname="log", style=log.css(), children=[log.message])]))
+                        DOMElement("span", style="padding-left:2em", children=[str(log_num)]),
+                        DOMElement("pre", classname="log", style=log.css(), children=[log.message])]))
                 log_num += 1
 
             page: DOMElement = DOMElement("html", lang="en-US", children=[
@@ -125,6 +132,7 @@ class Logger:
                         padding: 25px;
                         font-family: menlo, monospace;
                         margin-bottom: 50px;
+                        border-radius: 15px;
                     }
                     
                     #menubar {
@@ -145,16 +153,35 @@ class Logger:
                         box-sizing: border-box;
                         font-family: "Avenir Next", "Helvetica Neue", "Arial"
                     }
+                    
+                    #game-board-wrapper {
+                        width:100vw;
+                        height:100vh;
+                        position:fixed;
+                        z-index:100;
+                        text-align: center;
+                        -webkit-backdrop-filter: blur(20px);
+                        backdrop-filter: blur(20px);
+                    }
                 """])
                 ]),
                 DOMElement("body", children=[
                     DOMElement("div", id="menubar", children=[
                         DOMElement("a", children=["#"],
-                                   onclick="javascript:window.location = '#log-' + prompt('Jump to log #:');"),
+                                   onclick="window.location = '#log-' + prompt('Jump to log #:');"),
                         DOMElement("a", children=["Top"], href="#log-1"),
-                        DOMElement("a", children=["Bottom"], href="#log-{}".format(len(logs)))
+                        DOMElement("a", children=["Bottom"], href="#log-{}".format(len(logs))),
+                        DOMElement("a", children=["Game Board"],
+                                   onclick="document.getElementById('game-board-wrapper').hidden=false")
                     ]),
-                    DOMElement("pre", classname="loglist", children=logs_html_list),
+                    DOMElement("div",
+                               id="game-board-wrapper",
+                               children=[
+                                   game_board_html,
+                                   DOMElement("button", children=["Close"],
+                                              onclick="document.getElementById('game-board-wrapper').hidden=true")
+                               ], hidden="false"),
+                    DOMElement("pre", classname="loglist", children=logs_html_list)
                 ])
             ])
             buffer.write(str(page))

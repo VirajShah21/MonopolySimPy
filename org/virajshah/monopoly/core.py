@@ -116,7 +116,7 @@ class MonopolyGame:
         turn.initial_balance = player.balance
 
         Logger.log(
-            "It is {}'s turn #{}. Starting at {}.".format(player.name, turn.turn_number, player.position))
+            "It is {}'s turn #{}. Starting at {}.".format(player.name, turn.turn_number, self.board[player.position]))
         Logger.log(
             "Dice Roll: {} and {} = {}".format(turn.dice_roll1, turn.dice_roll2, turn.dice_roll1 + turn.dice_roll2))
 
@@ -176,7 +176,7 @@ class MonopolyGame:
         """
         to_log = ""
         for p in self.players:
-            to_log += "{} has ${} and {}\n".format(p.name, p.balance, [str(prop) for prop in p.properties])
+            to_log += "{} (${})\n{}\n{}\n".format(p.name, p.balance, "=" * len(p.name), str(p.properties))
         Logger.log(to_log, type="player-update")
 
 
@@ -192,7 +192,7 @@ class Player:
         self.balance: int = 1500
         self.position: int = 0
         self.turn_history: List[TurnHistoryRecord] = []
-        self.properties: List[Property] = []
+        self.properties: PropertyList = PropertyList([])
         self.prisoner: bool = False
         self.game: MonopolyGame = game  # Game is assigned by MonopolyGame
         self.configuration: PlayerConfiguration = PlayerConfiguration()
@@ -222,6 +222,17 @@ class Player:
         :return: The player's name
         """
         return self.name
+
+
+class PropertyList(list):
+    def __init__(self, base):
+        super().__init__(base)
+
+    def __str__(self):
+        out: str = ""
+        for prop in self:
+            out += str(prop) + "\n"
+        return out
 
 
 class PlayerConfiguration:
@@ -359,21 +370,23 @@ class Property(Tile, ABC):
             Calculated relative to properties owned by the owner
             and the set which they belong to.
         """
-        count: int = 0
-        set_attr: TileAttribute = self.get_set_attribute()
+        if self.owner is not None:
+            count: int = 0
+            set_attr: TileAttribute = self.get_set_attribute()
 
-        for prop in self.owner.properties:
-            if prop.get_set_attribute() == set_attr:
-                count += 1
+            for prop in self.owner.properties:
+                if prop.get_set_attribute() == set_attr:
+                    count += 1
 
-        count: float = float(count)
+            count: float = float(count)
 
-        if set_attr == TileAttribute.SET1 or set_attr == TileAttribute.SET8 or set_attr == TileAttribute.UTILITY:
-            return count / 2
-        elif set_attr == TileAttribute.RAILROAD:
-            return count / 4
-        else:
-            return count / 3
+            if set_attr == TileAttribute.SET1 or set_attr == TileAttribute.SET8 or set_attr == TileAttribute.UTILITY:
+                return count / 2
+            elif set_attr == TileAttribute.RAILROAD:
+                return count / 4
+            else:
+                return count / 3
+        return 0
 
     def purchase(self, purchaser: Player) -> None:
         """
@@ -555,6 +568,7 @@ class NonColoredProperty(Property):
         """
 
         end_tag: Union[str, None] = None
+
         if self.is_monopoly_completed():
             end_tag = "(Monopoly)"
         elif self.get_set_attribute() == TileAttribute.RAILROAD:
@@ -876,6 +890,17 @@ class TradeBroker:
         receiving: TileAttribute = broker.most_wanted_set()
         giving: TileAttribute = other_broker.most_wanted_set()
 
+        key: int = randrange(100000000, 1000000000)
+        print("[{}] Proposed trade:\n{}".format(key, str(deal)))
+        print("Between {} and {}".format(self.client.name, other_player.name))
+        print("{} Properties:\n{}".format(self.client.name, str(self.client.properties)))
+        print("{} Properties:\n{}".format(other_player.name, str(other_player.properties)))
+        print("Receiving set: " + str(receiving))
+        print("Giving set: " + str(giving))
+        print("\n\n\n")
+
+        Logger.log("[{}] Proposed trade: \n{}".format(key, str(deal)), type="transaction")
+
         if receiving is not None and giving is not None and receiving != giving:
             deal.player1acquisitions = [prop for prop in other_player.properties if receiving in prop.attributes]
             deal.player2acquisitions = [prop for prop in client.properties if giving in prop.attributes]
@@ -893,7 +918,7 @@ class TradeBroker:
 
             deal.compensation = player2value - player1value
 
-            Logger.log("Trade Deal\n==========\n" + str(deal))
+            Logger.log("Trade Deal Executed\n===================\n" + str(deal))
             deal.execute()
             return True
         return False
