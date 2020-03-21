@@ -45,6 +45,10 @@ class Log:
             fg = "black"
             bg = bg.format("#eea2a2 0%, #bbc1bf 19%, #57c6e1 42%", "#b49fda 79%, #7ac5d8 100%")
             shadow = shadow.format("lightblue")
+        elif self.type == "trade":
+            fg = "black"
+            bg = bg.format("#2575fc", "#66a6ff")
+            shadow = shadow.format("#66a6ff")
         else:  # default
             fg = "white"
             bg = bg.format("black", "rgb(50, 50, 50)")
@@ -73,6 +77,15 @@ class Logger:
         if printing_enabled:
             print(message)
         logs.append(Log(message, **kwargs))
+
+    @staticmethod
+    def enable_printing() -> None:
+        """
+        Enables printing
+        :return: None
+        """
+        global printing_enabled
+        printing_enabled = True
 
     @staticmethod
     def save(filename: str) -> None:
@@ -121,7 +134,7 @@ class Logger:
                         word-wrap: break-word;
                     }
                     
-                    .loglist {
+                    .log-list {
                         padding-left: 10vw;
                         padding-right: 10vw;
                         padding-top: 10vh;
@@ -181,7 +194,7 @@ class Logger:
                                    DOMElement("button", children=["Close"],
                                               onclick="document.getElementById('game-board-wrapper').hidden=true")
                                ], hidden="false"),
-                    DOMElement("pre", classname="loglist", children=logs_html_list)
+                    DOMElement("pre", classname="log-list", children=logs_html_list)
                 ])
             ])
             buffer.write(str(page))

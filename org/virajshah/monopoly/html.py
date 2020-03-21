@@ -16,7 +16,7 @@ class DOMElement:
         self.element = element
         self.attributes: Dict[str, str] = {}
         self.children: List[Union[DOMElement, str]] = []
-        self.autoclose = False
+        self.autoclose: bool = False
 
         for key in kwargs:
             if key not in ["children", "autoclose", "classname"]:

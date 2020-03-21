@@ -44,21 +44,21 @@ class MonopolyGame:
 
     @staticmethod
     def build_houses(player: "Player"):
-        mortgager: MortgageManager = MortgageManager(player)
-        propman: PropertyManager = PropertyManager(player)
+        mortgage_manager: MortgageManager = MortgageManager(player)
+        property_manager: PropertyManager = PropertyManager(player)
         to_build: PropertyList
-        class_b: PropertyList = propman.class_b_properties()
-        class_c: PropertyList = propman.class_c_properties()
-        class_d: PropertyList = propman.class_d_properties()
-        class_e: PropertyList = propman.class_e_properties()
-        class_f: PropertyList = propman.class_f_properties()
+        class_b: PropertyList = property_manager.class_b_properties()
+        class_c: PropertyList = property_manager.class_c_properties()
+        class_d: PropertyList = property_manager.class_d_properties()
+        class_e: PropertyList = property_manager.class_e_properties()
+        class_f: PropertyList = property_manager.class_f_properties()
 
         if player.configuration.mortgage_to_build and player.configuration.quick_builder:
             to_build = PropertyList(class_b + class_c + class_d)
-            mortgager.liquidate_all(PropertyList(class_e + class_f))
+            mortgage_manager.liquidate_all(PropertyList(class_e + class_f))
         elif player.configuration.mortgage_to_build:
             to_build: PropertyList = class_b or class_c or class_d
-            mortgager.liquidate_all(class_f if len(class_f) != 0 else class_e)
+            mortgage_manager.liquidate_all(class_f if len(class_f) != 0 else class_e)
         elif player.configuration.quick_builder:
             to_build: PropertyList = PropertyList(class_b + class_c + class_d)
         else:
@@ -153,8 +153,7 @@ class MonopolyGame:
         turn.recent_balance = player.balance
 
         if player.balance < 0:
-            mortgager: MortgageManager = MortgageManager(player)
-            mortgager.force_mortgage(-player.balance)
+            MortgageManager(player).force_mortgage(-player.balance)
 
         if player.balance < 0:
             for prop in player.properties:
@@ -599,19 +598,19 @@ class MortgageManager:
         """
         liquidated: int = 0
 
-        propman: PropertyManager = PropertyManager(self.client)
+        property_manager: PropertyManager = PropertyManager(self.client)
 
-        liquidated += self.liquidate(propman.class_f_properties(), threshold)
+        liquidated += self.liquidate(property_manager.class_f_properties(), threshold)
         if liquidated < threshold:
-            self.liquidate(propman.class_e_properties(), threshold)
+            self.liquidate(property_manager.class_e_properties(), threshold)
             if liquidated < threshold:
-                self.liquidate(propman.class_d_properties(), threshold)
+                self.liquidate(property_manager.class_d_properties(), threshold)
                 if liquidated < threshold:
-                    self.liquidate(propman.class_c_properties(), threshold)
+                    self.liquidate(property_manager.class_c_properties(), threshold)
                     if liquidated < threshold:
-                        self.liquidate(propman.class_b_properties(), threshold)
+                        self.liquidate(property_manager.class_b_properties(), threshold)
                         if liquidated < threshold:
-                            self.liquidate(propman.class_a_properties(), threshold)
+                            self.liquidate(property_manager.class_a_properties(), threshold)
         return liquidated
 
     @staticmethod
@@ -789,10 +788,10 @@ class TradeBroker:
             if set_attr not in attrs:
                 attrs.append(set_attr)
 
-        propman: PropertyManager = self.property_manager
+        property_manager: PropertyManager = self.property_manager
         for i in range(len(attrs) - 1):
             for j in range(i + 1, len(attrs)):
-                if propman.attribute_completion(attrs[i]) < propman.attribute_completion(attrs[j]):
+                if property_manager.attribute_completion(attrs[i]) < property_manager.attribute_completion(attrs[j]):
                     tmp: TileAttribute = attrs[i]
                     attrs[i] = attrs[j]
                     attrs[j] = tmp
