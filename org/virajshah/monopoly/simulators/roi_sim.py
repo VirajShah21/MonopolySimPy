@@ -11,6 +11,7 @@ if __name__ == "__main__":
     while len(game.players) > 1:
         game.run_next_turn()
 
+    Logger.save("/tmp/ROI_logs.html")
     investments: InvestmentTracker = game.investment_tracker
     all_records: List[InvestmentRecord] = game.investment_tracker.ledger
     active_record: List[InvestmentRecord] = [record for record in all_records if record.status == "ACTIVE"]

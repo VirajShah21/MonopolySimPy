@@ -42,6 +42,51 @@ class MonopolyGame:
         """
         self.players.append(player)
 
+    @staticmethod
+    def build_houses(player: "Player"):
+        mortgager: MortgageManager = MortgageManager(player)
+        to_build: List[Property]
+        class_b: List[Property] = mortgager.class_b_properties()
+        class_c: List[Property] = mortgager.class_c_properties()
+        class_d: List[Property] = mortgager.class_d_properties()
+        class_e: List[Property] = mortgager.class_e_properties()
+        class_f: List[Property] = mortgager.class_f_properties()
+
+        if player.configuration.mortgage_to_build and player.configuration.quick_builder:
+            to_build = class_b + class_c + class_d
+            mortgager.liquidate_all(class_e + class_f)
+        elif player.configuration.mortgage_to_build:
+            to_build: List[Property] = class_b or class_c or class_d
+            mortgager.liquidate_all(class_f if len(class_f) != 0 else class_e)
+        elif player.configuration.quick_builder:
+            to_build: List[Property] = class_b + class_c + class_d
+        else:
+            to_build: List[Property] = class_b or class_c or class_d
+
+        for prop in to_build:
+            assert isinstance(prop, ColoredProperty)
+            house_cost: int = prop.house_cost()
+            insurance: int = player.configuration.insurance_amount(player.game)
+            while prop.houses < 5 and player.balance - house_cost > insurance:
+                prop.houses += 1
+                player.add_money(-house_cost)
+            prop.distribute_houses()
+
+    def player_landed_on_property(self, player: "Player", turn: TurnHistoryRecord):
+        prop: Property = cast(Property, self.board[player.position])
+
+        if prop.owner is None and player.balance - prop.price >= player.configuration.insurance_amount(self):
+            prop.purchase(player)
+            turn.new_properties.append(prop.name)
+            self.investment_tracker.track_property(prop.name, prop.owner.name, self.turn_number, prop.price)
+            Logger.log("{} purchased {} for ${}".format(player.name, prop.name, prop.price), type="transaction")
+        elif prop.owner is not None and prop.owner != player:
+            rent_due = prop.rent(roll=(turn.dice_roll1 + turn.dice_roll2))
+            player.send_money(rent_due, prop.owner)
+            self.investment_tracker.rent_collected(prop.name, player.name, rent_due)
+            Logger.log("{} payed {} ${} for rent on {}".format(player, prop.owner, rent_due, prop),
+                       type="transaction")
+
     def run_next_turn(self) -> None:
         """
         Run the turn of the next player
@@ -98,59 +143,16 @@ class MonopolyGame:
         turn.destination = player.position
 
         if TileAttribute.PROPERTY in self.board[player.position].attributes:
-            prop: Property = cast(Property, self.board[player.position])
-
-            if prop.owner is None and player.balance - prop.price >= player.configuration.insurance_amount(self):
-                prop.purchase(player)
-                turn.new_properties.append(prop.name)
-                self.investment_tracker.track_property(prop.name, prop.owner.name, self.turn_number, prop.price)
-                Logger.log("{} purchased {} for ${}".format(player.name, prop.name, prop.price), type="transaction")
-            elif prop.owner is not None and prop.owner != player:
-                rent_due = prop.rent(roll=(turn.dice_roll1 + turn.dice_roll2))
-                player.send_money(rent_due, prop.owner)
-                self.investment_tracker.rent_collected(prop.name, player.name, rent_due)
-                Logger.log("{} payed {} ${} for rent on {}".format(player, prop.owner, rent_due, prop),
-                           type="transaction")
+            self.player_landed_on_property(player, turn)
 
         TradeBroker(player).run_best_trade()
 
-        mortgager: MortgageManager = MortgageManager(player)
-        to_build: List[Property]
-        class_b: List[Property] = mortgager.class_b_properties()
-        class_c: List[Property] = mortgager.class_c_properties()
-        class_d: List[Property] = mortgager.class_d_properties()
-        class_e: List[Property] = mortgager.class_e_properties()
-        class_f: List[Property] = mortgager.class_f_properties()
-
-        if player.configuration.mortgage_to_build:
-            if player.configuration.quick_builder:  # Mortgage all + build on all properties
-                to_build = class_b + class_c + class_d
-                mortgager.liquidate_all(class_e + class_f)
-            else:
-                to_build: List[Property] = class_b if len(class_b) != 0 else class_c
-                to_build = to_build if len(to_build) != 0 else class_d
-                mortgager.liquidate_all(class_f if len(class_f) != 0 else class_e)
-        else:
-            if player.configuration.quick_builder:
-                to_build: List[Property] = class_b + class_c + class_d
-            else:
-                to_build: List[Property] = class_b if len(class_b) != 0 else class_c
-                to_build = to_build if len(to_build) != 0 else class_d
-        for prop in to_build:
-            assert isinstance(prop, ColoredProperty)
-            house_cost: int = prop.house_cost()
-            insurance: int = player.configuration.insurance_amount(player.game)
-            while prop.houses < 5 and player.balance - house_cost > insurance:
-                prop.houses += 1
-                player.add_money(-house_cost)
-
-        for prop in player.properties:
-            if isinstance(prop, ColoredProperty):
-                prop.distribute_houses()
+        MonopolyGame.build_houses(player)
 
         turn.recent_balance = player.balance
 
         if player.balance < 0:
+            mortgager: MortgageManager = MortgageManager(player)
             mortgager.force_mortgage(-player.balance)
 
         if player.balance < 0:
